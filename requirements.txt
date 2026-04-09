@@ -1,0 +1,18 @@
+# --- Base de données et Mathématiques ---
+numpy
+pandas
+matplotlib
+
+# --- Vision par ordinateur (Perception) ---
+opencv-python
+
+# --- Machine Learning / Deep Learning ---
+torch
+torchvision
+
+# --- Apprentissage par renforcement et Multi-Agents ---
+gymnasium
+ray[rllib]
+
+# --- Client pour le simulateur CARLA ---
+carla==0.9.15  # Assurez-vous que la version correspond à celle de votre simulateur
