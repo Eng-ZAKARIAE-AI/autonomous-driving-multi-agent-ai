@@ -25,10 +25,10 @@ This project aims to design a multi-agent system for autonomous driving decision
 
 ## 🚀 How to go :
 
-  Chacun crée une branche
-  Travaille dessus
-  Push
-  Crée une Pull Request (une demande pour ajouter des modifications dans la branche main avec validation par ton partenaire)
-  L’autre valide
+  * Chacun crée une branche
+  * Travaille dessus
+  * Push
+  * Crée une Pull Request (une demande pour ajouter des modifications dans la branche main avec validation par ton partenaire)
+  * L’autre valide
 
 
