@@ -20,12 +20,15 @@ This project aims to design a multi-agent system for autonomous driving decision
 
 ## 👥 Team
 
-* Your Name
-* Your Partner Name
+* Your Zakariae
+* Your Meryam
 
-## 🚀 How to Run
+## 🚀 How to go :
 
-```bash
-pip install -r requirements.txt
-python main.py
-```
+  * Chacun crée une branche
+  * Travaille dessus
+  * Push
+  * Crée une Pull Request (une demande pour ajouter des modifications dans la branche main avec validation par ton partenaire)
+  * L’autre valide
+
+
