@@ -6,8 +6,9 @@ This project aims to design a multi-agent system for autonomous driving decision
 
 ## 🧠 Technologies
 
-* Python
+* Python7
 * Machine Learning / Deep Learning
+* computer vision
 * Multi-Agent Systems
 * Simulation (CARLA / SUMO)
 
