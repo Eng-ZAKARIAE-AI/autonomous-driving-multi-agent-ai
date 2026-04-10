@@ -21,8 +21,8 @@ This project aims to design a multi-agent system for autonomous driving decision
 
 ## 👥 Team
 
-* Your Zakariae
-* Your Meryam
+*  Zakariae
+*  Meryam
 
 ## 🚀 How to go :
 
