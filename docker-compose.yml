@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  carla:
+    image: carlasim/carla:0.9.15
+    ports:
+      - "2000:2000"
+      - "2001:2001"
+    command: /bin/bash ./CarlaUE4.sh -nosound -RenderOffScreen
+
+  ai:
+    build: .
+    depends_on:
+      - carla
+    environment:
+      - CARLA_HOST=carla
+      - CARLA_PORT=2000
