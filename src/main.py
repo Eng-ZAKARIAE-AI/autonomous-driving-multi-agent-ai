@@ -8,4 +8,3 @@ client = carla.Client(host, port)
 client.set_timeout(10.0)
 
 world = client.get_world()
-

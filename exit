@@ -1,0 +1,115 @@
+[33mcommit 94caea7f9c4615b7cd9291bcb18d725f86939c13[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Merge: ac45812 3816458
+Author: mariamelaiboudi-crypto <mariamelaiboudi@gmail.com>
+Date:   Sat Apr 25 18:10:42 2026 +0100
+
+    Merge pull request #2 from Eng-ZAKARIAE-AI/dev2
+    
+    dltprt
+
+[33mcommit 381645861021f399b24004065031e63b134cec23[m[33m ([m[1;31morigin/dev2[m[33m)[m
+Author: Maryam <mariamelaiboudi@gmail.com>
+Date:   Sat Apr 25 18:04:36 2026 +0100
+
+    dltprt
+
+[33mcommit ac458124c303a7ba26f23b526e0e49548b02b185[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m
+Merge: 4f42333 c68748d
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Sat Apr 25 17:30:40 2026 +0100
+
+    Merge branch 'main' into dev
+
+[33mcommit 4f4233307ba1c027e5dc190d9310b4b598ba5edf[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Sat Apr 25 17:29:48 2026 +0100
+
+    update V2
+
+[33mcommit 3622e6c2067da97f0287e35a21fa41aab2270586[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 23 16:14:39 2026 +0100
+
+    all is good
+
+[33mcommit c68748d8f27165507edf08a88b3333b7370e4fb4[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 23 16:08:16 2026 +0100
+
+    update V1
+
+[33mcommit 6a3882271bed6b9465f7e460396fc81f314ef2ed[m
+Author: mariamelaiboudi-crypto <mariamelaiboudi@gmail.com>
+Date:   Fri Apr 10 17:47:15 2026 +0100
+
+    Update README.md
+
+[33mcommit 9daaf0b088f75e0533f63fb24961a2d950e656a2[m
+Author: mariamelaiboudi-crypto <mariamelaiboudi@gmail.com>
+Date:   Fri Apr 10 17:46:40 2026 +0100
+
+    Update README.md
+
+[33mcommit a7c2c6234f0de70f2150662e06137843dc08ade1[m
+Merge: c097103 98c1e5c
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 17:58:43 2026 +0100
+
+    update readme.md
+
+[33mcommit c097103359ab05ac051ca3c74e5cb9900593fb95[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 17:55:02 2026 +0100
+
+    add requirement.text
+
+[33mcommit 98c1e5cac5ad2e0a060a23a5e54ad94efcc91bec[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 17:50:23 2026 +0100
+
+    Fix formatting of instructions in README.md
+
+[33mcommit 30a6cc3bfc76bef662fd30a66ab6a9efd87e04e1[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 17:49:49 2026 +0100
+
+    Update README.md
+
+[33mcommit fb141913121b79d3787facd20c6e33a379e57e83[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 17:45:07 2026 +0100
+
+    Update README.md
+
+[33mcommit 517ba63998d4f9313fb37a3742a8936d3176b6cd[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 17:43:25 2026 +0100
+
+    update Readme.md
+
+[33mcommit df1804bffad7c56261c0c1ad67b8b090c3309449[m
+Merge: ea9ccb3 fb8d1aa
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 17:33:06 2026 +0100
+
+    Merge pull request #1 from Eng-ZAKARIAE-AI/dev
+    
+    dev first commit
+
+[33mcommit fb8d1aad993ef546ebc90323271a934031372ef5[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 17:32:00 2026 +0100
+
+    dev first commit
+
+[33mcommit ea9ccb37da0842321b4e1eeb14399ee6e3702b55[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 17:30:55 2026 +0100
+
+    fist commit
+
+[33mcommit d2ca74371337d3de879ec7ff60a8fc0f8eae6a5c[m
+Author: ZAKARIAE EL HADDOUCHI <200651075+Eng-ZAKARIAE-AI@users.noreply.github.com>
+Date:   Thu Apr 9 13:27:39 2026 +0100
+
+    Initial commit
