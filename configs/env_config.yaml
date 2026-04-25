@@ -1,0 +1,11 @@
+# configs/env_config.yaml
+scenarios:
+  - name: urban_intersection
+    agents: 4
+    traffic: moderate
+    weather: clear
+    goal: navigate intersection without collision
+  - name: highway_merge
+    agents: 6
+    traffic: dense
+    goal: merge safely at 80 km/h

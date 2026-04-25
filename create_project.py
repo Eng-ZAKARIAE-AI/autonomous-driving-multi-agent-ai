@@ -1,132 +1,169 @@
 import os
 
-# Dossier racine (déjà dedans)
-base_dir = "."
+# Configuration du projet
+BASE_DIR = "."
 
-# Dossiers à créer (seulement s'ils n'existent pas)
-directories = [
-    "data",
-    "notebooks",
+# Structure des dossiers complète (Source: Page 2, 3)
+DIRECTORIES = [
+    "docker",
+    "configs",
+    "src/envs",
     "src/agents",
-    "src/environment",
     "src/models",
-    "src/decision",
+    "src/safety",
+    "src/communication",
     "src/utils",
-    "src/carla_env",
+    "training",
     "tests",
-    "docs"
+    "results/logs",
+    "results/checkpoints"
 ]
 
-# Fichiers standards à créer (si absents)
-files = {
-    "README.md": "# Autonomous Driving Multi-Agent AI\n\nProjet de niveau Master utilisant CARLA.\n",
-    "requirements.txt": "",
-    ".gitignore": "venv/\n__pycache__/\n.ipynb_checkpoints/\n"
-}
+# --- CONTENU DES FICHIERS ---
 
-# Fichiers Docker (ajoutés uniquement s'ils n'existent pas)
-docker_files = {
-    ".dockerignore": """venv/
-__pycache__/
-.ipynb_checkpoints/
-.git/
-.gitignore
-notebooks/
-tests/
-docs/
-""",
+# Configuration des Scénarios (Source: Page 4)
+ENV_CONFIG = """# configs/env_config.yaml
+scenarios:
+  - name: urban_intersection
+    agents: 4
+    traffic: moderate
+    weather: clear
+    goal: navigate intersection without collision
+  - name: highway_merge
+    agents: 6
+    traffic: dense
+    goal: merge safely at 80 km/h
+"""
 
-    "Dockerfile": """FROM python:3.10-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
+# Dockerfile Agents (Source: Page 6)
+DOCKERFILE_AGENTS = """FROM python:3.11-slim
 WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY src/ src/
-COPY data/ data/
-
+# Installation des dépendances système pour OpenCV
+RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
+RUN pip install carla==0.9.15 gymnasium numpy opencv-python torch stable-baselines3 pettingzoo ray[rllib] redis
+COPY . .
 CMD ["python", "src/main.py"]
-""",
-
-    "docker-compose.yml": """version: "3.9"
-
-services:
-  carla:
-    image: carlasim/carla:0.9.15
-    ports:
-      - "2000:2000"
-      - "2001:2001"
-    command: /bin/bash ./CarlaUE4.sh -nosound -RenderOffScreen
-
-  ai:
-    build: .
-    depends_on:
-      - carla
-    environment:
-      - CARLA_HOST=carla
-      - CARLA_PORT=2000
 """
+
+# Docker Compose (Source: Page 6)
+DOCKER_COMPOSE = """version: "3.8"
+services:
+  carla-server:
+    image: carlasim/carla:0.9.15
+    runtime: nvidia
+    ports:
+      - "2000-2002:2000-2002"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    command: /bin/bash CarlaUE4.sh -RenderOffScreen -world-port=2000
+
+  agent-trainer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agents
+    depends_on:
+      - carla-server
+    volumes:
+      - ./src:/app/src
+      - ./results:/app/results
+      - ./configs:/app/configs
+    environment:
+      - CARLA_HOST=carla-server
+"""
+
+# Wrapper Gymnasium Minimal (Source: Page 6)
+CARLA_ENV_PY = """import gymnasium as gym
+import carla
+import numpy as np
+
+class CarlaEnv(gym.Env):
+    def __init__(self, host='localhost', port=2000):
+        super().__init__()
+        self.client = carla.Client(host, port)
+        self.client.set_timeout(10.0)
+        self.world = self.client.get_world()
+        
+    def reset(self, seed=None):
+        # Logique de reset simplifiée
+        return {}, {}
+
+    def step(self, action):
+        # Logique de step simplifiée
+        return {}, 0.0, False, False, {}
+"""
+
+# Sécurité : Control Barrier Function (Source: Page 12)
+CBF_PY = """import numpy as np
+
+class ControlBarrierFunction:
+    def __init__(self, safety_margin=2.5, alpha=0.5):
+        self.d_safe = safety_margin [cite: 323]
+        self.alpha = alpha [cite: 323]
+
+    def h(self, ego, obstacle):
+        # Distance euclidienne - marge de sécurité
+        dist = np.sqrt((ego.x - obstacle.x)**2 + (ego.y - obstacle.y)**2) - self.d_safe [cite: 323]
+        return dist
+"""
+
+# Main.py : Point d'entrée
+MAIN_PY = """import carla
+import os
+from src.envs.carla_env import CarlaEnv
+
+def main():
+    print("🚀 Initialisation du projet Autonomous Driving...")
+    host = os.getenv("CARLA_HOST", "localhost")
+    try:
+        env = CarlaEnv(host=host)
+        print("✅ Connexion réussie au serveur CARLA")
+    except Exception as e:
+        print(f"❌ Erreur: {e}")
+
+if __name__ == "__main__":
+    main()
+"""
+
+# --- LOGIQUE DE CRÉATION ---
+
+FILES = {
+    "configs/env_config.yaml": ENV_CONFIG,
+    "docker/Dockerfile.agents": DOCKERFILE_AGENTS,
+    "docker-compose.yml": DOCKER_COMPOSE,
+    "src/envs/carla_env.py": CARLA_ENV_PY,
+    "src/safety/cbf.py": CBF_PY,
+    "src/main.py": MAIN_PY,
+    "requirements.txt": "carla==0.9.15\\ngymnasium\\nnumpy\\ntorch\\nstable-baselines3\\npettingzoo\\nray[rllib]\\nredis",
+    ".gitignore": "venv/\\n__pycache__/\\nresults/\\n.env\\n*.pyc"
 }
 
-# main.py (client CARLA minimal)
-main_py_content = """import carla
-import os
-
-host = os.getenv("CARLA_HOST", "localhost")
-port = int(os.getenv("CARLA_PORT", 2000))
-
-client = carla.Client(host, port)
-client.set_timeout(10.0)
-
-world = client.get_world()
-print("✅ Connecté à CARLA :", world.get_map().name)
-"""
-
-print("🚀 Vérification et ajout des éléments manquants...\n")
-
-# Création des dossiers
-for directory in directories:
-    dir_path = os.path.join(base_dir, directory)
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-        print(f"📁 Dossier créé : {directory}")
-
-        # .gitkeep pour Git
-        with open(os.path.join(dir_path, ".gitkeep"), "w"):
+def create_project():
+    print("🏗️ Création de la structure du projet...")
+    
+    # Création des répertoires
+    for folder in DIRECTORIES:
+        path = os.path.join(BASE_DIR, folder)
+        os.makedirs(path, exist_ok=True)
+        # Ajout d'un .gitkeep pour Git
+        with open(os.path.join(path, ".gitkeep"), "w") as f:
             pass
-    else:
-        print(f"✔ Dossier existe : {directory}")
+        print(f"  ✔ Dossier: {folder}")
 
-# Création des fichiers standards
-for file, content in files.items():
-    file_path = os.path.join(base_dir, file)
-    if not os.path.exists(file_path):
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        print(f"📄 Fichier créé : {file}")
-    else:
-        print(f"✔ Fichier existe : {file}")
+    # Création des fichiers
+    for file_path, content in FILES.items():
+        full_path = os.path.join(BASE_DIR, file_path)
+        if not os.path.exists(full_path):
+            with open(full_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            print(f"  ✔ Fichier: {file_path}")
+        else:
+            print(f"  ⚠ Existe déjà: {file_path}")
 
-# Docker files
-for file, content in docker_files.items():
-    if not os.path.exists(file):
-        with open(file, "w", encoding="utf-8") as f:
-            f.write(content)
-        print(f"🐳 Docker ajouté : {file}")
-    else:
-        print(f"✔ Docker existe : {file}")
+    print("\n✅ Projet prêt ! Utilisez 'docker-compose up' pour démarrer l'infrastructure.")
 
-# main.py
-main_py_path = os.path.join("src", "main.py")
-if not os.path.exists(main_py_path):
-    with open(main_py_path, "w", encoding="utf-8") as f:
-        f.write(main_py_content)
-    print("🧠 main.py créé (client CARLA)")
-else:
-    print("✔ src/main.py existe déjà")
-
-print("\n✅ Projet mis à jour sans écraser les fichiers existants")
+if __name__ == "__main__":
+    create_project()

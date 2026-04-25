@@ -1,0 +1,7 @@
+FROM python:3.11-slim
+WORKDIR /app
+# Installation des dépendances système pour OpenCV
+RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
+RUN pip install carla==0.9.15 gymnasium numpy opencv-python torch stable-baselines3 pettingzoo ray[rllib] redis
+COPY . .
+CMD ["python", "src/main.py"]
