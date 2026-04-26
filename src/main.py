@@ -10,3 +10,5 @@ client.set_timeout(10.0)
 world = client.get_world()
 print("✅ Connecté à CARLA :", world.get_map().name)
 print("Hello world Im here")
+
+print("workng on object detection feature")
