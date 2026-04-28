@@ -2,7 +2,7 @@
 
 ## 📌 Description
 
-This project aims to design a multi-agent system for autonomous driving decision-making.
+This project aims to design a multi-agent system for autonomous driving decision-making
 
 ## 🧠 Technologies
 
