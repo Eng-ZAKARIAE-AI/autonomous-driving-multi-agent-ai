@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # --- Base scientifique ---
 numpy
 pandas
@@ -17,3 +18,11 @@ ray[rllib]
 
 # --- CARLA Simulator ---
 carla==0.9.15
+=======
+torch
+numpy
+pyyaml
+carla==0.9.15
+opencv-python
+matplotlib
+>>>>>>> clean-branch

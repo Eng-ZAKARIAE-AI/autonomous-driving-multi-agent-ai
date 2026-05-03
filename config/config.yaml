@@ -4,7 +4,11 @@ carla:
   map: Town03
   synchronous: false
   fixed_delta_seconds: 0.05
+<<<<<<< HEAD
   timeout: 10.0
+=======
+  timeout: 30.0
+>>>>>>> clean-branch
   ego_filter: vehicle.tesla.model3
   traffic_vehicles: 8
   pedestrians: 6
