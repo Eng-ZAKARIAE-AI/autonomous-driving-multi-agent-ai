@@ -1,4 +1,23 @@
+<<<<<<< HEAD
 venv/
 __pycache__/
 .ipynb_checkpoints/
 create_project.py
+=======
+__pycache__/
+*.pyc
+venv/
+.env
+
+models/
+checkpoints/
+logs/
+data/
+
+*.h5
+*.pth
+*.pt
+
+Carla/
+*.bin
+>>>>>>> clean-branch

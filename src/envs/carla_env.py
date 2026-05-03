@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> clean-branch
 """CARLA environment wrapper for reinforcement learning."""
 
 import os
@@ -314,4 +317,7 @@ class CarlaEnv:
         self.collision_sensor = None
         self.camera_sensor = None
         self.camera_image = None
+<<<<<<< HEAD
 
+=======
+>>>>>>> clean-branch
