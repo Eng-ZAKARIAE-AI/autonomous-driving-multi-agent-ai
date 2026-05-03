@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+venv/
+.env
+
+models/
+checkpoints/
+logs/
+data/
+
+*.h5
+*.pth
+*.pt
+
+Carla/
+*.bin

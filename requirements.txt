@@ -1,0 +1,6 @@
+torch
+numpy
+pyyaml
+carla==0.9.15
+opencv-python
+matplotlib
