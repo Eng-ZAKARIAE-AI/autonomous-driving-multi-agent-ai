@@ -7,7 +7,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     'carla': {
         'host': 'localhost',
         'port': 2000,
-        'timeout': 10.0,
+        'timeout': 30.0,
         'map': 'Town03',
         'synchronous': False,
         'fixed_delta_seconds': 0.05,
@@ -55,7 +55,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     'agents': {
         'decision': {
             'state_dim': 6,
-            'action_dim': 2,
+            'action_dim': 3,
             'hidden_dim': 128
         },
         'planning': {
