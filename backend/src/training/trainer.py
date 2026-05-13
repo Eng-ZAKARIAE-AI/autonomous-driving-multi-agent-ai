@@ -7,11 +7,19 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 import numpy as np
+<<<<<<< HEAD:src/training/trainer.py
 from src.environment.carla_env import CarlaGymEnv
 from src.rl.ppo.ppo_agent import PPOAgent
 from src.rl.sac.sac_agent import SACAgent
 from src.evaluation.metrics import compute_metrics
 from src.visualization.plots import plot_training_history
+=======
+from simulator.envs.carla_env import CarlaGymEnv
+from backend.src.agents.ppo.ppo_agent import PPOAgent
+from backend.src.agents.sac.sac_agent import SACAgent
+from backend.src.evaluation.metrics import compute_metrics
+from backend.src.visualization.plots import plot_training_history
+>>>>>>> 17689537eb3382699e133733d7fdceadc4b4db53:backend/src/training/trainer.py
 
 
 class Trainer:

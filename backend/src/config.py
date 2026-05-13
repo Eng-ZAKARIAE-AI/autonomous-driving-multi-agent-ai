@@ -106,11 +106,19 @@ class Config:
         self._config = self._load_config()
 
     def _load_config(self) -> Dict[str, Any]:
+        import os
         config = DEFAULT_CONFIG.copy()
         if self.path.exists():
             with open(self.path, 'r', encoding='utf-8') as f:
                 user_config = yaml.safe_load(f) or {}
             self._merge(config, user_config)
+        
+        # Override with environment variables
+        if os.getenv('CARLA_HOST'):
+            config['carla']['host'] = os.getenv('CARLA_HOST')
+        if os.getenv('CARLA_PORT'):
+            config['carla']['port'] = int(os.getenv('CARLA_PORT'))
+            
         return config
 
     def _merge(self, base: Dict[str, Any], update: Dict[str, Any]) -> None:

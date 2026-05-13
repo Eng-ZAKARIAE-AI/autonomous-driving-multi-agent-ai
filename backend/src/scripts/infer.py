@@ -3,10 +3,10 @@
 import argparse
 from pathlib import Path
 import numpy as np
-from src.config import Config
-from src.environment.carla_env import CarlaGymEnv
-from src.rl.ppo.ppo_agent import PPOAgent
-from src.rl.sac.sac_agent import SACAgent
+from backend.src.config import Config
+from simulator.envs.carla_env import CarlaGymEnv
+from backend.src.agents.ppo.ppo_agent import PPOAgent
+from backend.src.agents.sac.sac_agent import SACAgent
 
 
 def main():

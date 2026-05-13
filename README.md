@@ -1,95 +1,109 @@
-# Autonomous Driving Multi-Agent AI
+# Autonomous Driving Multi-Agent AI (Multi-Service Architecture)
 
-## Introduction
+## Overview
 
-Ce projet propose une base logicielle pour l’entraînement et l’inférence de systèmes de conduite autonome dans le simulateur CARLA. Il combine un environnement Gym-like, des agents d’apprentissage par renforcement (PPO / SAC) et un cadre de simulation pour l’expérimentation sur des scénarios de trajectoire et de sécurité.
+This project provides a professional, enterprise-grade software stack for training and deploying autonomous driving agents in the CARLA simulator. It has been refactored into a **multi-service architecture** to ensure modularity, scalability, and ease of deployment.
 
-## Objectif
+## Key Features
 
-Permettre à des développeurs et chercheurs de tester des politiques d’agents autonomes dans un environnement CARLA, avec une configuration centralisée, une journalisation des entraînements et des scripts d’inférence.
-
----
-
-## Fonctionnalités principales
-
-- Entraînement et inférence avec les algorithmes PPO et SAC
-- Wrapper CARLA compatible style Gym
-- Gestion des récompenses et métriques d’évaluation
-- Chargement de configuration YAML personnalisée
-- Environnement de simulation avec véhicule ego, trafic et capteurs caméra
+- **Multi-Service Architecture**: Decoupled Backend (AI), Simulator (CARLA), and Frontend (Dashboard).
+- **Advanced RL Algorithms**: Production-ready implementations of **PPO** and **SAC** for continuous control.
+- **Real-Time Telemetry**: Integrated **FastAPI** server in the backend providing live data via **WebSockets**.
+- **Containerization**: Fully dockerized environment with NVIDIA GPU support for both CARLA and the AI agents.
+- **Gym-Compatible Environment**: A robust wrapper for CARLA following the Gymnasium interface.
 
 ---
 
-## Installation
+## Project Structure
 
-### Prérequis
-
-- Python 3.8+
-- CARLA 0.9.15 installé et accessible
-- Un environnement virtuel recommandé
-
-### Étapes
-
-1. Cloner le dépôt :
-```bash
-git clone <repo-url>
-cd autonomous-driving-multi-agent-ai
+```text
+.
+├── backend/                # Core AI logic and Telemetry API
+│   ├── src/                # Python source code
+│   │   ├── agents/         # PPO and SAC agent implementations
+│   │   ├── models/         # State representation and encoders
+│   │   ├── training/       # Training and evaluation pipelines
+│   │   └── multi_agent_main.py # Entry point (FastAPI + AI Loop)
+│   ├── config/             # YAML configurations
+│   └── Dockerfile          # GPU-optimized backend image
+├── simulator/              # CARLA integration layer
+│   ├── envs/               # CarlaGymEnv and sensor management
+│   └── carla_simulation.py # Simulation utility scripts
+├── frontend/               # Visualization layer
+│   └── web/                # React dashboard (FastAPI integration)
+├── docker-compose.yml      # Orchestrates all services
+└── requirements.txt        # Backend dependencies
 ```
 
-2. Créer un environnement Python :
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Docker & Docker Compose**
+- **NVIDIA Container Toolkit** (for GPU acceleration)
+- **CARLA 0.9.15** (managed automatically via Docker)
+
+### Installation & Deployment
+
+The recommended way to run the project is using Docker Compose:
+
 ```bash
-python -m venv .venv
-.\.venv\Scripts\activate
+docker compose up --build
 ```
 
-3. Installer les dépendances :
-```bash
-pip install -r requirements.txt
-```
-
-4. Vérifier que CARLA tourne sur `localhost:2000` avant de lancer l’entraînement ou l’inférence.
+This command will:
+1. Start the **CARLA 0.9.15** simulator.
+2. Build and launch the **AI Backend** (training/inference).
+3. Launch the **Web Frontend** dashboard.
 
 ---
 
-## Utilisation
+## Telemetry & Monitoring
 
-### Exécution principale
+The AI Backend includes a FastAPI server that broadcasts live telemetry data:
 
-Le script principal est `run.py`.
+- **WebSocket Endpoint**: `ws://localhost:8000/ws/telemetry`
+- **REST Endpoint**: `http://localhost:8000/telemetry`
 
-```bash
-python run.py --mode train --algorithm ppo
-python run.py --mode infer --algorithm ppo
-python run.py --mode evaluate --algorithm sac
-```
-
-### Commandes disponibles
-
-- `--mode train` : lancer l’entraînement
-- `--mode infer` : lancer l’inférence avec un modèle enregistré
-- `--mode evaluate` : évaluer un modèle sur plusieurs épisodes
-- `--algorithm {ppo,sac}` : choisir l’algorithme
-- `--config path/to/config.yaml` : charger un fichier de configuration personnalisé
-- `--model-path path/to/model.pt` : charger un modèle spécifique
+Telemetry data includes:
+- Current Speed (km/h)
+- Lane Offset (m)
+- Collision status
+- Instantaneous Reward
+- Control Actions (throttle, steer, brake)
 
 ---
 
-## Architecture du projet
+## Usage (Local Development)
 
-- `src/` : code source du projet
-  - `config.py` : gestion des paramètres et du YAML
-  - `environment/` : wrapper CARLA et gestion de l’environnement
-  - `reward/` : fonction de récompense
-  - `state_representation/` : construction de l’état pour l’agent
-  - `rl/` : implémentations PPO et SAC
-  - `training/` : pipeline d’entraînement et d’évaluation
-  - `evaluation/` : métriques et rapports
-  - `visualization/` : génération de graphiques d’entraînement
-- `config/` : fichiers YAML de configuration
-- `requirements.txt` : dépendances Python
+If you prefer to run the backend locally (without Docker):
+
+1. **Set PYTHONPATH**:
+   ```bash
+   export PYTHONPATH=$PYTHONPATH:$(pwd)/backend:$(pwd)/simulator
+   ```
+
+2. **Launch the Backend**:
+   ```bash
+   python backend/src/multi_agent_main.py --mode train --algorithm sac
+   ```
+
+### Arguments:
+- `--mode {train,infer,evaluate,auto}`: Execution mode.
+- `--algorithm {ppo,sac}`: Choice of RL algorithm.
+- `--config path/to/config.yaml`: Custom configuration path.
+- `--port 8000`: Port for the telemetry server.
 
 ---
 
-## Licence
+## Architecture Details
 
-Ce projet est distribué sous la licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+For a deep dive into the system design, algorithms, and safety features (CBF), please refer to [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

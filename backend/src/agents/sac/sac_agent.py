@@ -9,7 +9,7 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-from src.rl.common import ImageEncoder, VectorEncoder
+from backend.src.agents.common import ImageEncoder, VectorEncoder
 
 
 class QNetwork(nn.Module):
