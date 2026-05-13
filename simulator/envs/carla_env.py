@@ -10,9 +10,9 @@ from typing import Any, Dict, Optional, Tuple
 import carla
 import numpy as np
 
-from src.config import config
-from src.reward.reward_function import RewardFunction
-from src.state_representation.state_builder import StateBuilder
+from backend.src.config import config
+from backend.src.reward.reward_function import RewardFunction
+from backend.src.models.state_builder import StateBuilder
 
 
 def _vector_length(vector: Tuple[float, float, float]) -> float:

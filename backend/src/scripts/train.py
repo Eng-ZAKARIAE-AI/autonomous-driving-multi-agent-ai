@@ -1,8 +1,8 @@
 """Entry point for training RL agents in CARLA."""
 
 import argparse
-from src.config import Config
-from src.training.trainer import Trainer
+from backend.src.config import Config
+from backend.src.training.trainer import Trainer
 
 
 def main():

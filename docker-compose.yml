@@ -1,17 +1,39 @@
 version: "3.9"
 
 services:
-  carla:
+  carla-sim:
     image: carlasim/carla:0.9.15
     ports:
-      - "2000:2000"
-      - "2001:2001"
-    command: /bin/bash ./CarlaUE4.sh -nosound -RenderOffScreen
-
-  ai:
-    build: .
-    depends_on:
-      - carla
+      - "2000-2002:2000-2002"
+    runtime: nvidia
     environment:
-      - CARLA_HOST=carla
+      - NVIDIA_VISIBLE_DEVICES=all
+    command: /bin/bash ./CarlaUE4.sh -nosound -RenderOffScreen -opengl
+
+  ai-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - carla-sim
+    runtime: nvidia
+    environment:
+      - CARLA_HOST=carla-sim
       - CARLA_PORT=2000
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/config:/app/config
+      - ./simulator:/app/simulator
+    ports:
+      - "8000:8000"
+
+  web-frontend:
+    build:
+      context: ./frontend/web
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8000
+    depends_on:
+      - ai-backend
