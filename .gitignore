@@ -1,23 +1,24 @@
-<<<<<<< HEAD
-venv/
-__pycache__/
-.ipynb_checkpoints/
-create_project.py
-=======
+# Python
 __pycache__/
 *.pyc
 venv/
 .env
+.ipynb_checkpoints/
 
+# Project specific
 models/
 checkpoints/
 logs/
 data/
 
+# Model weights
 *.h5
 *.pth
 *.pt
 
+# CARLA
 Carla/
 *.bin
->>>>>>> clean-branch
+
+# Misc
+create_project.py
