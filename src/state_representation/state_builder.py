@@ -15,12 +15,18 @@ class StateBuilder:
 
     def build_state(self, observation: Dict[str, Any]) -> Dict[str, np.ndarray]:
         image = self.camera_processor.process(observation.get('camera'))
+        
+        # Normalize vector features
+        speed_norm = float(self.config['simulation'].get('speed_normalizer', 30.0))
+        lane_norm = float(self.config['simulation'].get('lane_normalizer', 4.0))
+        dist_norm = float(self.config['simulation'].get('distance_normalizer', 100.0))
+        
         vector = np.array([
-            observation['speed'] / float(self.config['simulation']['speed_normalizer']),
-            observation['lane_offset'] / float(self.config['simulation']['lane_normalizer']),
-            observation['goal_distance'] / float(self.config['simulation']['distance_normalizer']),
-            observation['goal_angle'] / np.pi,
-            float(observation['collision']),
+            observation['speed'] / speed_norm,
+            observation['lane_offset'] / lane_norm,
+            observation['goal_distance'] / dist_norm,
+            observation.get('goal_angle', 0.0) / np.pi,
+            float(observation.get('collision', False)),
         ], dtype=np.float32)
 
         return {
