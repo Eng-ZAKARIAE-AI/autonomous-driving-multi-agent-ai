@@ -10,7 +10,8 @@ models/
 checkpoints/
 logs/
 data/
-me/
+
+
 # Model weights
 *.h5
 *.pth
