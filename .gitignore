@@ -10,7 +10,7 @@ models/
 checkpoints/
 logs/
 data/
-
+me/
 # Model weights
 *.h5
 *.pth
@@ -22,4 +22,3 @@ Carla/
 
 # Misc
 create_project.py
-me
