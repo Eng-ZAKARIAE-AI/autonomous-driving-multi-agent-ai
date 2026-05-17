@@ -1,0 +1,39 @@
+---
+id: e5bf5531-ae14-440e-83c9-f7f8c8c89660
+---
+graph LR
+    %% Custom Styling for professional look
+    classDef frontend fill:#2b3e50,stroke:#34495e,stroke-width:2px,color:#fff;
+    classDef backend fill:#1a252f,stroke:#2c3e50,stroke-width:2px,color:#fff;
+    classDef simulation fill:#2c3e50,stroke:#7f8c8d,stroke-width:2px,color:#fff;
+    classDef nodeStyle fill:#007acc,stroke:#005999,stroke-width:1px,color:#fff,font-weight:bold;
+
+    subgraph Frontend["Frontend Layer"]
+        Dashboard[🌐 Dashboard <br> React Web]:::nodeStyle
+    end
+    style Frontend fill:none,stroke:#7f8c8d,stroke-width:2px,stroke-dasharray: 5 5
+
+    subgraph Backend["Backend Layer (AI & API)"]
+        FastAPI[🖥️ FastAPI <br> Telemetry Server]:::nodeStyle
+        StateBuilder[⚙️ State Builder <br> Encoder]:::nodeStyle
+        RL_Agent[🧠 RL Agent <br> SAC / PPO]:::nodeStyle
+        Trainer[🔄 Trainer <br> Loop]:::nodeStyle
+    end
+    style Backend fill:none,stroke:#7f8c8d,stroke-width:2px,stroke-dasharray: 5 5
+
+    subgraph Simulation["Simulation Layer"]
+        GymEnv[☁️ CarlaGymEnv <br> Gymnasium]:::nodeStyle
+        CARLA[🗄️ CARLA Simulator <br> v0.9.15]:::nodeStyle
+    end
+    style Simulation fill:none,stroke:#7f8c8d,stroke-width:2px,stroke-dasharray: 5 5
+
+    %% Symmetrical Left-to-Right & Loop Connections
+    Dashboard <--> |WebSocket / REST| FastAPI
+    FastAPI <--> |Shared State| Trainer
+    
+    %% Clear Training Pipeline Cycle
+    Trainer --> |Step / Reset| GymEnv
+    GymEnv <--> |CARLA API| CARLA
+    GymEnv --> |Raw Obs| StateBuilder
+    StateBuilder --> |Fused State| RL_Agent
+    RL_Agent --> |Optimize / Actions| Trainer

@@ -1,0 +1,43 @@
+graph TD
+    %% Custom Styling for Docker Containers
+    classDef container fill:#1d2731,stroke:#0db7ed,stroke-width:2px,color:#fff;
+    classDef hardware fill:#2d3e50,stroke:#27ae60,stroke-width:1px,color:#fff;
+    classDef nodeStyle fill:#007acc,stroke:#005999,stroke-width:1px,color:#fff,font-weight:bold;
+
+    %% External Entry Point
+    User((👤 Client Browser)) -->|HTTP Port 3000| Nginx
+
+    subgraph DockerCompose ["🐳 Docker Compose Stack"]
+        direction TB  %% Forces the subgraphs inside this box to stack vertically
+        
+        subgraph Frontend_Cont ["Container: frontend-service"]
+            Nginx[🖥️ Nginx Server <br> Port 3000]:::nodeStyle
+            ReactApp[📦 React Static Files]:::nodeStyle
+        end
+        style Frontend_Cont fill:none,stroke:#0db7ed,stroke-width:1px,stroke-dasharray: 5 5
+
+        subgraph Backend_Cont ["Container: backend-service"]
+            FastAPI_Srv[⚡ FastAPI Server <br> Port 8000]:::nodeStyle
+            PyApp[🧠 Python RL Core]:::nodeStyle
+            GPU2[💚 NVIDIA GPU]:::hardware
+        end
+        style Backend_Cont fill:none,stroke:#0db7ed,stroke-width:1px,stroke-dasharray: 5 5
+
+        subgraph Carla_Cont ["Container: carla-service"]
+            CARLA_Bin[🚗 CARLA Simulator <br> Port 2000]:::nodeStyle
+            GPU1[💚 NVIDIA GPU]:::hardware
+        end
+        style Carla_Cont fill:none,stroke:#0db7ed,stroke-width:1px,stroke-dasharray: 5 5
+
+    end
+    style DockerCompose fill:none,stroke:#7f8c8d,stroke-width:2px
+
+    %% Clean Data Connections Layer
+    Nginx -->|Reverse Proxy| ReactApp
+    ReactApp -->|WebSocket Port 8000| FastAPI_Srv
+    FastAPI_Srv <--> |Shared Memory| PyApp
+    PyApp -->|API Port 2000| CARLA_Bin
+    
+    %% Hardware mappings
+    PyApp --- GPU2
+    CARLA_Bin --- GPU1
