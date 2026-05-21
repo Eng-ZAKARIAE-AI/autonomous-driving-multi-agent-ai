@@ -39,26 +39,28 @@ This document tracks the current progress of the Autonomous Driving Multi-Agent 
 
 ---
 
-## 🔴 Frontend Layer
-**Status: Initial Setup (Code Missing)**
+## 🟢 Frontend Layer
+**Status: In Progress (Core Dashboard Ready)**
 
-### ⚠️ Current State
-- A `Dockerfile` exists, but the **React/TypeScript source code is currently missing** from the `frontend/web` directory.
-- The UI design is well-documented in `frontend/Design.md`, but implementation has not started.
+### ✅ Completed
+- **Project Initialization:** React 19 + TypeScript + Tailwind CSS v4 project established in `frontend/web`.
+- **WebSocket Integration:** Real-time telemetry connection to the backend `/ws/telemetry` endpoint.
+- **Mission Control Dashboard:**
+    - **Telemetry Gauges:** Speed, Lane Offset, and Collision status monitoring.
+    - **Action Visualization:** Real-time feedback for Steer and Throttle actions.
+    - **Live Reward Chart:** Interactive visualization of step rewards using Recharts.
+- **Responsive Layout:** Sidebar-based navigation and high-density grid layout for technical monitoring.
 
-### 🚀 Next Steps (High Priority)
-1.  **Project Initialization:** Set up a React + TypeScript + Tailwind CSS project in `frontend/web`.
-2.  **WebSocket Integration:** Connect the frontend to the backend's `/ws/telemetry` endpoint.
-3.  **Live Dashboard:**
-    - Implement **Gauges** for Speed, Throttle, and Steer.
-    - Integrate the **Live Camera Feed** viewer.
-    - Add **Real-time Charts** for Reward and Loss metrics using Recharts or Chart.js.
-4.  **Control Panel:** Add UI elements to start/stop training and switch between SAC and PPO models.
+### 🚀 Next Steps
+1.  **Live Video Streaming:** Implement MJPEG/WebRTC streaming for the 84x84 agent perception feed.
+2.  **Interactive Controls:** Connect UI buttons to backend endpoints for starting/stopping training and switching between SAC and PPO.
+3.  **Historical Metrics:** Add a view for browsing past training episodes and performance logs.
+4.  **Model Management:** Build the interface for loading and saving specific agent checkpoints.
 
 ---
 
 ## 🛠️ Summary of Priorities
 
-1.  **Frontend Implementation:** This is the most critical missing piece. The backend is broadcasting data, but there is no "Mission Control" to see it.
-2.  **Advanced Perception (YOLO):** Enhancing the agent's spatial awareness.
-3.  **Safety Verification:** Ensuring the agent doesn't crash during edge cases.
+1.  **Live Perception Streaming:** Completing the frontend vision feed and implementing backend MJPEG streaming for real-time monitoring of agent "sight".
+2.  **Interactive Mission Control:** Wiring up the dashboard buttons to control the simulation lifecycle (Start/Stop/Agent Swap).
+3.  **Advanced Perception (YOLO):** Integrating explicit object detection to enhance agent spatial awareness.
