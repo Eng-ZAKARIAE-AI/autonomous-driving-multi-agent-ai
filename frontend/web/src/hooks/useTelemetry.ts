@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { TelemetryData } from '../types';
 
 export const useTelemetry = (url: string = 'ws://localhost:8000/ws/telemetry') => {
@@ -6,10 +6,14 @@ export const useTelemetry = (url: string = 'ws://localhost:8000/ws/telemetry') =
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const [reconnectTrigger, setReconnectTrigger] = useState(0);
 
-  const connect = useCallback(() => {
+  useEffect(() => {
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout>;
+    
     try {
-      const socket = new WebSocket(url);
+      socket = new WebSocket(url);
       socketRef.current = socket;
 
       socket.onopen = () => {
@@ -30,8 +34,10 @@ export const useTelemetry = (url: string = 'ws://localhost:8000/ws/telemetry') =
       socket.onclose = () => {
         setConnected(false);
         console.log('Disconnected from telemetry server');
-        // Reconnect after a delay
-        setTimeout(connect, 3000);
+        // Reconnect after a delay by triggering the effect
+        reconnectTimeout = setTimeout(() => {
+          setReconnectTrigger(prev => prev + 1);
+        }, 3000);
       };
 
       socket.onerror = (event) => {
@@ -39,19 +45,19 @@ export const useTelemetry = (url: string = 'ws://localhost:8000/ws/telemetry') =
         console.error('WebSocket error', event);
       };
     } catch (err) {
-      setError('Failed to establish connection');
+      setTimeout(() => setError('Failed to establish connection'), 0);
       console.error(err);
     }
-  }, [url]);
 
-  useEffect(() => {
-    connect();
     return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
+      if (socket) {
+        socket.close();
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
       }
     };
-  }, [connect]);
+  }, [url, reconnectTrigger]);
 
   return { data, connected, error };
 };

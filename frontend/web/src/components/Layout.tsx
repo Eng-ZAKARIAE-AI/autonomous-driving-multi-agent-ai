@@ -1,82 +1,61 @@
-import React from 'react';
-import { LayoutDashboard, Activity, Cpu, Map, FileText, Settings, Radio } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-interface SidebarItemProps {
-  icon: React.ElementType;
-  label: string;
-  active?: boolean;
-}
-
-const SidebarItem = ({ icon: Icon, label, active }: SidebarItemProps) => (
-  <div className={cn(
-    "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-200 rounded-lg",
-    active ? "bg-primary text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
-  )}>
-    <Icon size={20} />
-    <span className="font-medium">{label}</span>
-  </div>
-);
+import { useState, type ReactNode } from 'react';
+import { Menu } from 'lucide-react';
+import { Sidebar } from './Sidebar';
+import { Topbar } from './Topbar';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   connected: boolean;
 }
 
 export const Layout = ({ children, connected }: LayoutProps) => {
-  return (
-    <div className="flex h-screen bg-background text-slate-200 overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col p-4 gap-6">
-        <div className="flex items-center gap-2 px-2 py-4">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-bold text-white">AD</div>
-          <span className="text-xl font-bold text-white tracking-tight">AD-MAI</span>
-        </div>
-        
-        <nav className="flex flex-col gap-2">
-          <SidebarItem icon={LayoutDashboard} label="Dashboard" active />
-          <SidebarItem icon={Activity} label="Training" />
-          <SidebarItem icon={Cpu} label="Agents" />
-          <SidebarItem icon={Map} label="Simulation" />
-          <SidebarItem icon={FileText} label="Telemetry Logs" />
-          <SidebarItem icon={Settings} label="Settings" />
-        </nav>
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-        <div className="mt-auto pt-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <Radio size={16} className={cn(connected ? "text-safety-green" : "text-safety-red animate-pulse")} />
-            <span className="text-sm font-medium">
-              {connected ? "Backend: Online" : "Backend: Offline"}
-            </span>
-          </div>
-        </div>
+  return (
+    <div className="flex h-screen bg-bg text-text overflow-hidden font-sans">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Desktop */}
+      <aside className="hidden lg:block shrink-0">
+        <Sidebar connected={connected} />
+      </aside>
+
+      {/* Sidebar - Mobile */}
+      <aside className={`fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:hidden`}>
+        <Sidebar connected={connected} onClose={() => setIsSidebarOpen(false)} />
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="h-16 bg-slate-900/50 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-8">
-          <h1 className="text-lg font-semibold text-white">Mission Control</h1>
-          <div className="flex items-center gap-4">
-            <div className="px-3 py-1 bg-slate-800 rounded-full text-xs font-semibold text-slate-300 border border-slate-700">
-              CARLA: <span className="text-safety-green ml-1">OK</span>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-medium text-white">
-              JD
-            </div>
-          </div>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Topbar - Mobile Toggle + Desktop Topbar */}
+        <header className="lg:hidden h-14 flex items-center justify-between px-4 border-b border-border bg-bg2">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 text-muted hover:text-text"
+          >
+            <Menu size={20} />
+          </button>
+          <span className="text-[13px] font-semibold tracking-wider text-text uppercase">AD-MAI</span>
+          <div className="w-8" />
         </header>
 
-        {/* Viewport */}
-        <div className="flex-1 overflow-y-auto p-8">
-          {children}
+        <div className="hidden lg:block">
+          <Topbar connected={connected} />
         </div>
-      </main>
+
+        {/* Viewport */}
+        <main className="flex-1 overflow-y-auto bg-bg">
+          <div className="p-[20px_22px] flex flex-col gap-4">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

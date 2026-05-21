@@ -8,17 +8,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#0F172A",
-        surface: "#1E293B",
-        primary: {
-          DEFAULT: "#6366F1",
-          hover: "#4F46E5",
-        },
-        safety: {
-          red: "#EF4444",
-          green: "#10B981",
-        },
-        telemetry: "#F59E0B",
+        bg: '#080c10',
+        bg2: '#0d1117',
+        bg3: '#161b22',
+        bg4: '#1c2333',
+        border: '#21262d',
+        border2: '#30363d',
+        text: '#e6edf3',
+        muted: '#7d8590',
+        muted2: '#484f58',
+        accent: '#58a6ff',
+        accent2: '#1f6feb',
+        green: '#3fb950',
+        red: '#f85149',
+        yellow: '#d29922',
+        purple: '#bc8cff',
+      },
+      fontFamily: {
+        sans: ['"IBM Plex Sans"', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'monospace'],
+      },
+      fontSize: {
+        'xs-custom': '10px',
+        'sm-custom': '11px',
+        'base-custom': '13px',
       },
     },
   },
