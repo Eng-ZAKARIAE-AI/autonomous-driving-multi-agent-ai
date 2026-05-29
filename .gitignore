@@ -12,7 +12,7 @@ models/
 checkpoints/
 logs/
 data/
-
+frontend/insp.html
 
 # Model weights
 *.h5
