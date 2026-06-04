@@ -34,6 +34,12 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 latest_telemetry = {}
+loop = None
+
+@app.on_event("startup")
+async def startup_event():
+    global loop
+    loop = asyncio.get_event_loop()
 
 @app.websocket("/ws/telemetry")
 async def websocket_endpoint(websocket: WebSocket):
@@ -62,19 +68,20 @@ def run_ai_loop(args, config, model_path):
             "speed": info.get("speed", 0),
             "lane_offset": info.get("lane_offset", 0),
             "collision": info.get("collision", False),
-            "reward": reward,
+            "reward": float(reward),
             "action": action.tolist() if hasattr(action, 'tolist') else action
         }
         latest_telemetry = telemetry_data
         
         # Broadcast via websocket if possible
-        try:
-            # We need to run the broadcast in the event loop of the FastAPI app
-            # For simplicity in this script, we just update the global latest_telemetry
-            # and the websocket endpoint can pull it or we can use a callback.
-            pass
-        except Exception:
-            pass
+        if loop:
+            try:
+                asyncio.run_coroutine_threadsafe(
+                    manager.broadcast(json.dumps(telemetry_data)),
+                    loop
+                )
+            except Exception as e:
+                print(f"Error broadcasting telemetry: {e}")
             
         return obs, reward, done, info
     
