@@ -50,6 +50,10 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 @app.get("/telemetry")
 async def get_telemetry():
     return latest_telemetry

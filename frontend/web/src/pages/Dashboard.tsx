@@ -2,7 +2,7 @@ import { useEffect, useReducer } from 'react';
 import { PageHeader } from '../components/PageHeader';
 import { MetricCard } from '../components/MetricCard';
 import { RewardChart } from '../components/RewardChart';
-import { useTelemetry } from '../hooks/useTelemetry';
+import { useTelemetryContext } from '../context/TelemetryContext';
 
 type HistoryAction = 
   | { type: 'ADD_DATA'; reward: number }
@@ -39,7 +39,7 @@ const mockAgents = [
 ];
 
 export const Dashboard = () => {
-  const { data } = useTelemetry();
+  const { data } = useTelemetryContext();
   const [rewardHistory, dispatch] = useReducer(historyReducer, []);
 
   useEffect(() => {

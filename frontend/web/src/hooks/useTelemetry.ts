@@ -1,7 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import type { TelemetryData } from '../types';
 
-export const useTelemetry = (url: string = 'ws://localhost:8000/ws/telemetry') => {
+// Derive the WS endpoint from the browser's own host so the hook works:
+//   - in dev:    Vite proxies /ws → localhost:8000
+//   - in Docker: Nginx proxies /ws → backend:8000
+function resolveWsUrl(path: string): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}${path}`;
+}
+
+export const useTelemetry = (path: string = '/ws/telemetry') => {
+  const url = resolveWsUrl(path);
   const [data, setData] = useState<TelemetryData | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -11,7 +20,7 @@ export const useTelemetry = (url: string = 'ws://localhost:8000/ws/telemetry') =
   useEffect(() => {
     let socket: WebSocket | null = null;
     let reconnectTimeout: ReturnType<typeof setTimeout>;
-    
+
     try {
       socket = new WebSocket(url);
       socketRef.current = socket;
@@ -33,8 +42,7 @@ export const useTelemetry = (url: string = 'ws://localhost:8000/ws/telemetry') =
 
       socket.onclose = () => {
         setConnected(false);
-        console.log('Disconnected from telemetry server');
-        // Reconnect after a delay by triggering the effect
+        console.log('Disconnected from telemetry server, retrying in 3s…');
         reconnectTimeout = setTimeout(() => {
           setReconnectTrigger(prev => prev + 1);
         }, 3000);
@@ -50,12 +58,8 @@ export const useTelemetry = (url: string = 'ws://localhost:8000/ws/telemetry') =
     }
 
     return () => {
-      if (socket) {
-        socket.close();
-      }
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-      }
+      if (socket) socket.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
   }, [url, reconnectTrigger]);
 
