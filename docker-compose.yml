@@ -1,39 +1,113 @@
 version: "3.9"
 
+# ── Shared network ─────────────────────────────────────────────────────────────
+networks:
+  sim-net:
+    driver: bridge
+
+# ── Named volumes ──────────────────────────────────────────────────────────────
+volumes:
+  models:
+  checkpoints:
+
+# ── Services ───────────────────────────────────────────────────────────────────
 services:
+
+  # ── CARLA Simulator ──────────────────────────────────────────────────────────
   carla-sim:
     image: carlasim/carla:0.9.15
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
     ports:
-      - "2000-2002:2000-2002"
-    runtime: nvidia
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-    command: /bin/bash ./CarlaUE4.sh -nosound -RenderOffScreen -opengl
+      - "2000:2000"   # CARLA RPC
+      - "2001:2001"   # CARLA streaming
+    command: >
+      /bin/bash ./CarlaUE4.sh
+      -nosound
+      -RenderOffScreen
+      -opengl
+      -carla-rpc-port=2000
+      -quality-level=Low
+    networks:
+      - sim-net
+    restart: unless-stopped
+    healthcheck:
+      # Probe CARLA's raw TCP port; bash built-in avoids needing netcat
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/2000' 2>/dev/null || exit 1"]
+      interval: 15s
+      timeout: 8s
+      start_period: 60s
+      retries: 10
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
-  ai-backend:
+  # ── Python RL Backend + FastAPI telemetry server ──────────────────────────────
+  backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    depends_on:
-      - carla-sim
+      context: .
+      dockerfile: backend/Dockerfile
     runtime: nvidia
+    depends_on:
+      carla-sim:
+        condition: service_healthy
     environment:
-      - CARLA_HOST=carla-sim
-      - CARLA_PORT=2000
-      - NVIDIA_VISIBLE_DEVICES=all
-    volumes:
-      - ./backend/src:/app/src
-      - ./backend/config:/app/config
-      - ./simulator:/app/simulator
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+      CARLA_HOST: carla-sim
+      CARLA_PORT: "2000"
+      PYTHONUNBUFFERED: "1"
+      MPLBACKEND: Agg
     ports:
       - "8000:8000"
+    volumes:
+      # Persist trained weights and training logs across container restarts
+      - models:/workspace/models
+      - checkpoints:/workspace/checkpoints
+      # Bind-mount source for live editing without rebuilding (development only)
+      - ./backend/src:/workspace/backend/src:ro
+      - ./backend/config:/workspace/backend/config:ro
+      - ./simulator:/workspace/simulator:ro
+    networks:
+      - sim-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      interval: 20s
+      timeout: 10s
+      start_period: 45s
+      retries: 6
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
-  web-frontend:
+  # ── React + Nginx Frontend ────────────────────────────────────────────────────
+  frontend:
     build:
       context: ./frontend/web
+      dockerfile: Dockerfile
+      target: production
+    depends_on:
+      backend:
+        condition: service_healthy
     ports:
       - "3000:3000"
-    environment:
-      - REACT_APP_BACKEND_URL=http://localhost:8000
-    depends_on:
-      - ai-backend
+    networks:
+      - sim-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 4

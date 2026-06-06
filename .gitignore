@@ -7,9 +7,11 @@ venv_new/
 .env
 .ipynb_checkpoints/
 
-# Project specific
-models/
-checkpoints/
+# Project specific — keep the directories (for Docker volume mounts) but ignore large binary files inside
+models/*
+!models/.gitkeep
+checkpoints/*
+!checkpoints/.gitkeep
 logs/
 data/
 frontend/insp.html

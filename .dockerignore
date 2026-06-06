@@ -1,8 +1,48 @@
-venv/
-__pycache__/
-.ipynb_checkpoints/
-.git/
+# Version control
+.git
 .gitignore
+.gitattributes
+
+# Python artifacts
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+*.egg-info
+.eggs
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.tox
+
+# Virtual environments
+.venv
+venv
+env
+
+# Frontend build artifacts — not needed in backend image
+frontend/web/node_modules
+frontend/web/dist
+frontend/web/.vite
+
+# Notebooks / docs
 notebooks/
-tests/
 docs/
+
+# OS artifacts
+**/.DS_Store
+**/Thumbs.db
+
+# Secrets / local config
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+*.tmp
+
+# Editor metadata
+.vscode
+.idea
+*.swp
