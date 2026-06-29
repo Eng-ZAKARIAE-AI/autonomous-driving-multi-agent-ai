@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard CARLA — Step 1 Test</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+    #status { color: #ff0; margin-bottom: 12px; }
+    #data   { font-size: 1.2em; line-height: 1.8; }
+    .label  { color: #888; }
+  </style>
+</head>
+<body>
+  <h2 style="color:#fff">Dashboard CARLA — Step 1 (WS test)</h2>
+  <div id="status">Connexion…</div>
+  <div id="data">—</div>
+
+  <script>
+    const WS_URL = "ws://localhost:8765";
+    let msgCount = 0;
+
+    function connect() {
+      const ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        document.getElementById("status").textContent =
+          "✓ Connecté à " + WS_URL;
+        document.getElementById("status").style.color = "#0f0";
+        console.log("[WS] Connecté");
+      };
+
+      ws.onmessage = (event) => {
+        msgCount++;
+        const state = JSON.parse(event.data);
+        // Step 1 : affiche tick / v_kmh / fsm_state
+        document.getElementById("data").innerHTML =
+          `<span class="label">messages reçus :</span> ${msgCount}<br>` +
+          `<span class="label">tick      :</span> ${state.tick}<br>` +
+          `<span class="label">v_kmh     :</span> ${state.v_kmh} km/h<br>` +
+          `<span class="label">fsm_state :</span> ${state.fsm_state}`;
+        // Garde aussi la trace dans la console
+        if (state.tick % 20 === 0) {
+          console.log("[CARLA]", state);
+        }
+      };
+
+      ws.onerror = (err) => {
+        document.getElementById("status").textContent =
+          "✗ Erreur WS — CARLA tourne-t-il avec --dashboard ?";
+        document.getElementById("status").style.color = "#f00";
+        console.error("[WS] Erreur", err);
+      };
+
+      ws.onclose = () => {
+        document.getElementById("status").textContent =
+          "Déconnecté — reconnexion dans 2 s…";
+        document.getElementById("status").style.color = "#ff0";
+        setTimeout(connect, 2000);
+      };
+    }
+
+    connect();
+  </script>
+</body>
+</html>

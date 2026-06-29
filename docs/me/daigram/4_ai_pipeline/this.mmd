@@ -1,0 +1,58 @@
+---
+id: 281e20b5-2582-4b1f-b592-747fe96c8971
+---
+graph TD
+    %% Define CSS Styles for Nodes (High-contrast, no icons)
+    classDef defaultStyle fill:#2d3436,stroke:#636e72,stroke-width:1px,color:#dfe6e9;
+    classDef inputStyle fill:#1e272e,stroke:#7f8c8d,stroke-width:2px,color:#ffffff;
+    classDef nnStyle fill:#1e272e,stroke:#0db7ed,stroke-width:2px,color:#ffffff;
+    classDef engineStyle fill:#1e272e,stroke:#2ecc71,stroke-width:2px,color:#ffffff;
+    classDef rewardStyle fill:#1e272e,stroke:#e74c3c,stroke-width:2px,color:#ffffff;
+
+    %% --- 1. INPUT MODALITIES ---
+    subgraph Inputs ["Input Modalities"]
+        IMG[RGB Camera <br> 84x84]:::inputStyle
+        VEC[Kinematics: <br> Speed, Offset, GPS]:::inputStyle
+    end
+    style Inputs fill:none,stroke:#7f8c8d,stroke-width:1px,stroke-dasharray: 5 5
+
+    %% --- 2. STATE REPRESENTATION ENCODERS ---
+    subgraph StateRep ["State Representation (MultiModalEncoder)"]
+        CNN[Image Encoder <br> CNN]:::nnStyle
+        MLP[Vector Encoder <br> MLP]:::nnStyle
+        Fusion[Concat / Fusion Layer]:::nnStyle
+    end
+    style StateRep fill:none,stroke:#0db7ed,stroke-width:1px,stroke-dasharray: 5 5
+
+    %% --- 3. DECISION ENGINE ---
+    subgraph DecisionEngine ["Decision Engine (Actor-Critic)"]
+        Policy[Gaussian Policy <br> Actor]:::engineStyle
+        Value[Q-Networks <br> Critics]:::engineStyle
+    end
+    style DecisionEngine fill:none,stroke:#2ecc71,stroke-width:1px,stroke-dasharray: 5 5
+
+    %% --- 4. REWARD ENGINEERING ---
+    subgraph RewardEng ["Reward Engineering"]
+        Action[Control Action: <br> Steering, Throttle, Brake]:::rewardStyle
+        RF[Reward Function Engine]:::rewardStyle
+        Weights[Weight Matrix: <br> Speed, Lane, Progress, Comfort]:::rewardStyle
+        ScalarReward[Total Scalar Reward]:::rewardStyle
+    end
+    style RewardEng fill:none,stroke:#e74c3c,stroke-width:1px,stroke-dasharray: 5 5
+
+    %% Symmetrical Parallel Routing
+    IMG --> CNN
+    VEC --> MLP
+    
+    CNN --> Fusion
+    MLP --> Fusion
+    
+    Fusion --> Policy
+    Fusion --> Value
+    
+    %% Downstream Cascade
+    Policy --> Action
+    Value -.-> Action
+    Action --> RF
+    RF --> Weights
+    Weights --> ScalarReward

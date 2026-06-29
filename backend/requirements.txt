@@ -1,0 +1,28 @@
+# ── Core scientific ─────────────────────────────────────────────────────────
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
+pyyaml>=6.0
+
+# ── Vision ──────────────────────────────────────────────────────────────────
+opencv-python>=4.8
+
+# ── Deep Learning ───────────────────────────────────────────────────────────
+torch>=2.0
+torchvision>=0.15
+
+# ── Reinforcement Learning ───────────────────────────────────────────────────
+stable-baselines3>=2.0
+gymnasium>=0.29
+
+# ── YOLOv8 Perception ────────────────────────────────────────────────────────
+ultralytics>=8.0
+
+# ── Web API + WebSocket ──────────────────────────────────────────────────────
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.0
+websockets>=12.0
+
+# ── CARLA Python client (install manually from CARLA 0.9.14 egg/wheel) ──────
+# carla==0.9.14   # pip install <carla_root>/PythonAPI/carla/dist/carla-*.whl

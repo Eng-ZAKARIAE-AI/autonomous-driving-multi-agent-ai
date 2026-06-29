@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard CARLA — Conduite Autonome Multi-Agent</title>
+  <style>
+    /* ============================================================
+       DESIGN TOKENS
+    ============================================================ */
+    :root {
+      --bg:      #080c12;
+      --card:    #0d1720;
+      --border:  #182535;
+      --border2: #1e3048;
+      --accent:  #1a7fa8;
+      --text:    #c8d8e8;
+      --dim:     #4a6070;
+      --muted:   #253040;
+      --green:   #2ecc71;
+      --yellow:  #f0a030;
+      --red:     #e03030;
+      --orange:  #e06020;
+      --cyan:    #00c8ff;
+    }
+
+    /* ============================================================
+       RESET  —  everything is 100 vh, no scroll
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      height: 100vh;
+      overflow: hidden;
+      font-family: "Courier New", Courier, monospace;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.35;
+      display: flex;
+      flex-direction: column;
+      padding: 7px 12px 8px;
+      gap: 6px;
+    }
+
+    /* ============================================================
+       HEADER  (flex: 0 0 auto  →  fixed height, ~32 px)
+    ============================================================ */
+    #header {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: nowrap;
+      padding: 5px 12px;
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 5px;
+    }
+
+    #header h1 {
+      font-size: 12px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .hbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 11px;
+    }
+
+    #ws-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: #12161e;
+      color: var(--dim);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    #ws-status::before { content: "●"; font-size: 9px; }
+    #ws-status.ok  { background: #07200d; color: var(--green); }
+    #ws-status.err { background: #1e0808; color: var(--red); }
+
+    #tick-val  { font-size: 15px; color: #fff; font-weight: bold; }
+    #fps-val   { color: var(--dim); }
+    #msg-count { color: var(--muted); font-size: 10px; }
+
+    /* ============================================================
+       MAIN LAYOUT GRID  (flex: 1  →  fills remaining 100vh)
+       Rows:  agent-row | sensor-row | main-row | fsm-row | log
+    ============================================================ */
+    .layout {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto auto 1fr 60px 56px;
+      gap: 6px;
+    }
+
+    /* ============================================================
+       CARDS  (shared)
+    ============================================================ */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 8px;
+    }
+
+    .card-title {
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 3px;
+      margin-bottom: 4px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 4px;
+      margin: 1px 0;
+    }
+
+    .lbl { color: var(--dim); font-size: 10px; flex-shrink: 0; }
+
+    .val {
+      color: var(--text);
+      font-weight: bold;
+      text-align: right;
+      font-size: 11px;
+    }
+    .val.green  { color: var(--green);  }
+    .val.yellow { color: var(--yellow); }
+    .val.red    { color: var(--red);    }
+    .val.orange { color: var(--orange); }
+    .val.grey   { color: var(--muted);  }
+    .val.cyan   { color: var(--cyan);   }
+
+    /* ============================================================
+       SPECIAL OVERRIDES  (id selector beats .val class)
+    ============================================================ */
+
+    /* FSM state hero — big colored text at top of Decision card */
+    #d_fsm {
+      display: block;
+      font-size: 16px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      padding: 0 0 5px;
+      line-height: 1.2;
+    }
+
+    /* Speed slightly bigger */
+    #v_v_kmh { font-size: 13px; }
+
+    /* Safety override red banner */
+    #safety-banner {
+      display: none;
+      text-align: center;
+      background: #3a0808;
+      border: 1px solid var(--red);
+      border-radius: 3px;
+      color: var(--red);
+      font-size: 9px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      padding: 1px 4px;
+      margin-bottom: 4px;
+    }
+    #safety-banner.active { display: block; }
+
+    /* ============================================================
+       ROW 1  —  6 agent cards
+    ============================================================ */
+    .agent-row {
+      display: grid;
+      grid-template-columns: 1.7fr 1.9fr 1.2fr 1.2fr 1.2fr 1.2fr;
+      gap: 6px;
+    }
+
+    /* ============================================================
+       ROW 2  —  Traffic Light + Stop Sign (compact strip)
+    ============================================================ */
+    .sensor-row {
+      display: flex;
+      gap: 6px;
+    }
+    .sensor-row .card {
+      flex: 0 0 auto;
+      min-width: 160px;
+    }
+
+    /* ============================================================
+       ROW 3  —  Mini-map + Speed chart + CTE chart  (fills 1fr)
+       Three equal-height columns side by side
+    ============================================================ */
+    .main-row {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr 1fr;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    /* ============================================================
+       CHART / MAP WRAPPERS
+       display:flex+column so canvas expands to fill remaining space
+    ============================================================ */
+    .chart-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 8px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .chart-title {
+      flex: 0 0 auto;
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--accent);
+      margin-bottom: 3px;
+    }
+
+    /* Canvas fills its flex-parent — sizeCanvas() reads getBoundingClientRect()
+       at script-init time so the layout-computed height is captured correctly. */
+    canvas {
+      display: block;
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Minimap box: flex-column so #minimap canvas fills it;
+       position:relative for the legend overlay */
+    #minimap-box {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #minimap-legend {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      font-size: 8px;
+      line-height: 1.9;
+      pointer-events: none;
+    }
+
+    /* ============================================================
+       ROW 5  —  Event log
+    ============================================================ */
+    #log {
+      background: #050a0f;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 10px;
+      overflow-y: auto;
+      font-size: 10px;
+      color: #3a5568;
+    }
+    #log .e  { margin: 1px 0; }
+    #log .w  { color: #cc8800; }
+    #log .a  { color: #cc3333; }
+  </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div id="header">
+  <h1>Dashboard CARLA — Conduite Autonome Multi-Agent</h1>
+  <div class="hbar">
+    <span id="ws-status">Connexion...</span>
+    <span>Tick&nbsp;<span id="tick-val">—</span></span>
+    <span id="fps-val">FPS —</span>
+    <span id="msg-count">0 msgs</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ===== ROW 1 — 6 agent cards ===== -->
+  <div class="agent-row">
+
+    <div class="card">
+      <div class="card-title">Vehicle State</div>
+      <div class="row"><span class="lbl">Speed</span>    <span class="val" id="v_v_kmh">— km/h</span></div>
+      <div class="row"><span class="lbl">Throttle</span> <span class="val" id="v_thr">—</span></div>
+      <div class="row"><span class="lbl">Brake</span>    <span class="val" id="v_brk">—</span></div>
+      <div class="row"><span class="lbl">Steer</span>    <span class="val" id="v_str">—</span></div>
+      <div class="row"><span class="lbl">Yaw / XY</span> <span class="val" id="v_yaw" style="font-size:9px">—</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Decision Agent (FSM)</div>
+      <span class="val" id="d_fsm">—</span>
+      <div class="row"><span class="lbl">Target spd</span> <span class="val" id="d_tspd">—</span></div>
+      <div class="row"><span class="lbl">Reason</span>     <span class="val" id="d_reason" style="font-size:9px;white-space:nowrap;overflow:hidden;max-width:130px;text-overflow:ellipsis">—</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Perception</div>
+      <div class="row"><span class="lbl">Obstacles</span> <span class="val" id="p_n">—</span></div>
+      <div class="row"><span class="lbl">Closest</span>   <span class="val" id="p_dist">—</span></div>
+      <div class="row"><span class="lbl">Class / v</span> <span class="val" id="p_cv" style="font-size:9px">—</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Planning</div>
+      <div class="row"><span class="lbl">Waypoints</span> <span class="val" id="pl_n">—</span></div>
+      <div class="row"><span class="lbl">Horizon</span>   <span class="val" id="pl_h">—</span></div>
+      <div class="row"><span class="lbl">CTE</span>       <span class="val" id="pl_cte">—</span></div>
+      <div class="row"><span class="lbl">Branch</span>    <span class="val" id="pl_branch">—</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Control (PID)</div>
+      <div class="row"><span class="lbl">Steer</span>      <span class="val" id="c_steer">—</span></div>
+      <div class="row"><span class="lbl">Throttle</span>   <span class="val" id="c_thr">—</span></div>
+      <div class="row"><span class="lbl">Brake</span>      <span class="val" id="c_brk">—</span></div>
+      <div class="row"><span class="lbl">Target spd</span> <span class="val" id="c_tspd">—</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Safety Agent</div>
+      <div id="safety-banner">⚠ OVERRIDE</div>
+      <div class="row"><span class="lbl">TTC</span>            <span class="val" id="s_ttc">—</span></div>
+      <div class="row"><span class="lbl">Override</span>       <span class="val" id="s_override">—</span></div>
+      <div class="row"><span class="lbl">Interventions</span>  <span class="val" id="s_inter">—</span></div>
+      <div class="row"><span class="lbl">Sensor</span>         <span class="val" id="s_fault">—</span></div>
+    </div>
+
+  </div><!-- /agent-row -->
+
+  <!-- ===== ROW 2 — Traffic + Stop ===== -->
+  <div class="sensor-row">
+
+    <div class="card">
+      <div class="card-title">Traffic Light</div>
+      <div class="row"><span class="lbl">State</span>    <span class="val" id="tl_state">—</span></div>
+      <div class="row"><span class="lbl">Distance</span> <span class="val" id="tl_dist">—</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Stop Sign</div>
+      <div class="row"><span class="lbl">Detected</span> <span class="val" id="ss_det">—</span></div>
+      <div class="row"><span class="lbl">Distance</span> <span class="val" id="ss_dist">—</span></div>
+    </div>
+
+  </div><!-- /sensor-row -->
+
+  <!-- ===== ROW 3 — Mini-map | Speed | CTE  (fills 1fr) ===== -->
+  <div class="main-row">
+
+    <div class="chart-wrap">
+      <div class="chart-title">Mini-Map — Route + Ego + Waypoints planifiés</div>
+      <div id="minimap-box">
+        <canvas id="minimap"></canvas>
+        <div id="minimap-legend">
+          <span style="color:#22cc44">● start</span>&nbsp;
+          <span style="color:#cc2244">● end</span>&nbsp;
+          <span style="color:#ff6a00">▲ ego</span>&nbsp;
+          <span style="color:#00aaff">• wps</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Speed (km/h)</div>
+      <canvas id="chart-speed"></canvas>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Cross-Track Error (m) — seuils ±0.3 m</div>
+      <canvas id="chart-cte"></canvas>
+    </div>
+
+  </div><!-- /main-row -->
+
+  <!-- ===== ROW 4 — FSM History (full width, 60 px grid row) ===== -->
+  <div class="chart-wrap">
+    <div class="chart-title">Decision State History</div>
+    <canvas id="chart-fsm"></canvas>
+  </div>
+
+  <!-- ===== ROW 5 — Event log (56 px grid row) ===== -->
+  <div id="log"></div>
+
+</div><!-- /layout -->
+
+<script>
+"use strict";
+
+// ============================================================
+//  CONFIG
+// ============================================================
+const WS_URL    = "ws://localhost:8765";
+const BUF_SIZE  = 250;
+const SPEED_MAX = 25;
+const CTE_RANGE = 0.8;
+const CTE_THR   = 0.3;
+
+// ============================================================
+//  FSM COLOURS
+// ============================================================
+const FSM_COLOR = {
+  FOLLOW_LANE: "#2ecc71",
+  SLOW_DOWN:   "#f0a030",
+  RED_LIGHT:   "#e03030",
+  STOP:        "#e03030",
+  YIELD:       "#e06020",
+  EMERGENCY:   "#ff0000",
+};
+function fsmColor(s)  { return FSM_COLOR[s] || "#2a3a50"; }
+function fsmCssClass(s) {
+  if (s === "FOLLOW_LANE") return "green";
+  if (s === "SLOW_DOWN")   return "yellow";
+  if (["RED_LIGHT","STOP","EMERGENCY"].includes(s)) return "red";
+  if (s === "YIELD")       return "orange";
+  return "";
+}
+
+// ============================================================
+//  CARD HELPERS
+// ============================================================
+function set(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className   = "val" + (cls ? " " + cls : "");
+}
+function fmtDist(d) { return d >= 998 ? "inf" : d.toFixed(1) + " m"; }
+
+// ============================================================
+//  CHART ENGINE  (vanilla Canvas, zero dep)
+// ============================================================
+
+// Make canvas pixel-sharp on HiDPI.
+// Called at construction — by the time the inline <script> runs,
+// the browser has already performed layout for all preceding elements,
+// so getBoundingClientRect() returns the flex/grid-computed size. ✓
+function sizeCanvas(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const dpr  = window.devicePixelRatio || 1;
+  canvas.width  = Math.round(rect.width  * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  canvas.getContext("2d").scale(dpr, dpr);
+  return { w: rect.width, h: rect.height };
+}
+
+// ---- LineChart ----
+class LineChart {
+  constructor(canvas, opts) {
+    this.canvas = canvas;
+    this.ctx    = canvas.getContext("2d");
+    this.color  = opts.color  || "#4cff4c";
+    this.yMin   = opts.yMin   ?? 0;
+    this.yMax   = opts.yMax   ?? 30;
+    this.unit   = opts.unit   || "";
+    this.thresholds = opts.thresholds || [];
+    this.zeroLine   = opts.zeroLine   ?? false;
+    this.buf    = [];
+    this.maxPts = BUF_SIZE;
+    this._sz    = sizeCanvas(canvas);
+  }
+
+  push(y) {
+    this.buf.push(y);
+    if (this.buf.length > this.maxPts) this.buf.shift();
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    const W   = this._sz.w;
+    const H   = this._sz.h;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#080c12";
+    ctx.fillRect(0, 0, W, H);
+
+    const yToPixel = (y) =>
+      H - 3 - ((y - this.yMin) / (this.yMax - this.yMin)) * (H - 6);
+
+    // Grid
+    ctx.strokeStyle = "#141e28";
+    ctx.lineWidth   = 1;
+    for (let i = 0; i <= 4; i++) {
+      const py = 3 + (H - 6) * i / 4;
+      ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py); ctx.stroke();
+    }
+
+    // Zero line (CTE)
+    if (this.zeroLine && this.yMin < 0) {
+      ctx.strokeStyle = "#253545"; ctx.setLineDash([]); ctx.lineWidth = 1;
+      const py = yToPixel(0);
+      ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py); ctx.stroke();
+    }
+
+    // Thresholds
+    for (const th of this.thresholds) {
+      const py = yToPixel(th.y);
+      ctx.strokeStyle = th.color;
+      ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = th.color; ctx.font = "8px monospace";
+      ctx.fillText(th.label, 3, py - 2);
+    }
+
+    if (this.buf.length < 2) return;
+
+    // Data line
+    ctx.strokeStyle = this.color; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+    ctx.beginPath();
+    const n = this.buf.length;
+    for (let i = 0; i < n; i++) {
+      const x  = (i / (this.maxPts - 1)) * W;
+      const y  = Math.max(this.yMin, Math.min(this.yMax, this.buf[i]));
+      const py = yToPixel(y);
+      if (i === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
+    }
+    ctx.stroke();
+
+    // Current value label
+    const last   = this.buf[this.buf.length - 1];
+    const colorOk = (this.thresholds.length === 0) ||
+                    this.thresholds.every(t => Math.abs(last) <= Math.abs(t.y));
+    ctx.fillStyle = colorOk ? this.color : "#ff4c4c";
+    ctx.font      = "bold 10px monospace";
+    const txt = last.toFixed(2) + this.unit;
+    ctx.fillText(txt, W - ctx.measureText(txt).width - 3, 11);
+  }
+}
+
+// ---- FSM History Bar ----
+class FsmHistory {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx    = canvas.getContext("2d");
+    this.buf    = [];
+    this.maxPts = BUF_SIZE;
+    this._sz    = sizeCanvas(canvas);
+  }
+
+  push(state) {
+    this.buf.push(state || "");
+    if (this.buf.length > this.maxPts) this.buf.shift();
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    const W   = this._sz.w;
+    const H   = this._sz.h;
+    const BAR = H - 14;   // bottom 14 px = legend
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#080c12";
+    ctx.fillRect(0, 0, W, H);
+
+    const n    = this.buf.length;
+    const segW = W / this.maxPts;
+    for (let i = 0; i < n; i++) {
+      ctx.fillStyle = fsmColor(this.buf[i]);
+      ctx.fillRect(i * segW, 0, Math.ceil(segW) + 1, BAR);
+    }
+    if (n > 0) {
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5;
+      const cx = n * segW;
+      ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, BAR); ctx.stroke();
+    }
+
+    // Legend
+    const legend = [
+      ["FOLLOW LANE", FSM_COLOR.FOLLOW_LANE],
+      ["SLOW DOWN",   FSM_COLOR.SLOW_DOWN],
+      ["RED LIGHT",   FSM_COLOR.RED_LIGHT],
+      ["YIELD",       FSM_COLOR.YIELD],
+      ["EMERGENCY",   FSM_COLOR.EMERGENCY],
+    ];
+    ctx.font = "8px monospace";
+    let lx = 2;
+    const ly = H - 3;
+    for (const [label, color] of legend) {
+      if (lx + 70 > W) break;
+      ctx.fillStyle = color;
+      ctx.fillRect(lx, H - 12, 7, 7);
+      ctx.fillStyle = "#506070";
+      ctx.fillText(label, lx + 9, ly);
+      lx += 10 + ctx.measureText(label).width + 6;
+    }
+  }
+}
+
+// ============================================================
+//  MINI-MAP
+// ============================================================
+
+class MiniMap {
+  constructor(canvasId) {
+    this.c    = document.getElementById(canvasId);
+    this._sz  = sizeCanvas(this.c);   // { w, h } CSS px; context scaled by DPR
+    this.ctx  = this.c.getContext("2d");
+    this._route   = null;
+    this._scale   = 4;
+    this._ox      = 0;
+    this._oy      = 0;
+    this._noRoute = true;
+  }
+
+  setRoute(points) {
+    this._route   = (points && points.length > 0) ? points : null;
+    this._noRoute = !this._route;
+    if (this._route) this._computeTransform();
+    this.draw(null, null, null, []);
+  }
+
+  // CARLA: x→East (right on canvas), y→South (down on canvas) — no y-flip needed.
+  // Uniform scale so the full route fits with 20 px padding.
+  _computeTransform() {
+    const pts = this._route;
+    if (!pts || pts.length === 0) return;
+    let xMin = Infinity, xMax = -Infinity;
+    let yMin = Infinity, yMax = -Infinity;
+    for (const [x, y] of pts) {
+      if (x < xMin) xMin = x;  if (x > xMax) xMax = x;
+      if (y < yMin) yMin = y;  if (y > yMax) yMax = y;
+    }
+    const PAD = 20;
+    const W = this._sz.w, H = this._sz.h;
+    const xR = (xMax - xMin) || 1;
+    const yR = (yMax - yMin) || 1;
+    this._scale = Math.min((W - 2*PAD) / xR, (H - 2*PAD) / yR);
+    this._ox = PAD + ((W - 2*PAD) - xR * this._scale) / 2 - xMin * this._scale;
+    this._oy = PAD + ((H - 2*PAD) - yR * this._scale) / 2 - yMin * this._scale;
+  }
+
+  _toPx(x, y) {
+    return [x * this._scale + this._ox, y * this._scale + this._oy];
+  }
+
+  draw(egoX, egoY, egoYaw, wpsXY) {
+    const ctx = this.ctx;
+    const W = this._sz.w, H = this._sz.h;
+    const hasEgo = (egoX != null);
+
+    ctx.fillStyle = "#0a0f14";
+    ctx.fillRect(0, 0, W, H);
+
+    if (this._noRoute || !this._route) {
+      ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillStyle = "#1a3040"; ctx.font = "8px monospace";
+      ctx.fillText("no --global-planner", 4, 4);
+      if (hasEgo) {
+        const sc = Math.min(W, H) / 120;
+        const ox = W/2 - egoX*sc, oy = H/2 - egoY*sc;
+        this._drawWps(ctx, wpsXY, sc, ox, oy);
+        this._drawEgo(ctx, W/2, H/2, egoYaw, Math.max(5, sc*1.5));
+      }
+      return;
+    }
+
+    // Road strip
+    if (this._route.length > 1) {
+      ctx.beginPath();
+      const [p0x, p0y] = this._toPx(this._route[0][0], this._route[0][1]);
+      ctx.moveTo(p0x, p0y);
+      for (let i = 1; i < this._route.length; i++) {
+        const [px, py] = this._toPx(this._route[i][0], this._route[i][1]);
+        ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = "#162534";
+      ctx.lineWidth   = Math.max(4, this._scale * 3.8);
+      ctx.lineJoin    = "round"; ctx.lineCap = "round";
+      ctx.stroke();
+
+      // Centre dash
+      ctx.beginPath();
+      const [q0x, q0y] = this._toPx(this._route[0][0], this._route[0][1]);
+      ctx.moveTo(q0x, q0y);
+      for (let i = 1; i < this._route.length; i++) {
+        const [qx, qy] = this._toPx(this._route[i][0], this._route[i][1]);
+        ctx.lineTo(qx, qy);
+      }
+      ctx.strokeStyle = "#1e4a6a"; ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // Start / end markers
+    if (this._route.length > 0) {
+      const [sx, sy] = this._toPx(this._route[0][0], this._route[0][1]);
+      ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2);
+      ctx.fillStyle = "#22cc44"; ctx.fill();
+
+      const last = this._route[this._route.length - 1];
+      const [ex, ey] = this._toPx(last[0], last[1]);
+      ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI*2);
+      ctx.fillStyle = "#cc2244"; ctx.fill();
+    }
+
+    this._drawWps(ctx, wpsXY, this._scale, this._ox, this._oy);
+
+    if (hasEgo) {
+      const [epx, epy] = this._toPx(egoX, egoY);
+      this._drawEgo(ctx, epx, epy, egoYaw, Math.max(5, this._scale * 1.5));
+    }
+  }
+
+  _drawWps(ctx, wpsXY, scale, ox, oy) {
+    if (!wpsXY || wpsXY.length === 0) return;
+    ctx.beginPath();
+    let first = true;
+    for (const [wx, wy] of wpsXY) {
+      const px = wx*scale+ox, py = wy*scale+oy;
+      if (first) { ctx.moveTo(px,py); first=false; } else ctx.lineTo(px,py);
+    }
+    ctx.strokeStyle = "#0088cc55"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = "#00aaff";
+    for (const [wx, wy] of wpsXY) {
+      ctx.beginPath();
+      ctx.arc(wx*scale+ox, wy*scale+oy, 2.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // canvas_angle = π/2 + yaw_deg*π/180
+  // (yaw=0→East=right, yaw=90→South=down; triangle initially points North)
+  _drawEgo(ctx, cx, cy, yaw, sz) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI/2 + (yaw||0) * Math.PI/180);
+    ctx.beginPath();
+    ctx.moveTo(0, -sz*1.5);
+    ctx.lineTo( sz*0.65,  sz*0.85);
+    ctx.lineTo(0,         sz*0.35);
+    ctx.lineTo(-sz*0.65,  sz*0.85);
+    ctx.closePath();
+    ctx.fillStyle = "#ff6a00"; ctx.fill();
+    ctx.strokeStyle = "#ffcc00"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.restore();
+  }
+
+  resize() {
+    this._sz = sizeCanvas(this.c);
+    this.ctx = this.c.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    this.ctx.scale(dpr, dpr);
+    if (this._route) this._computeTransform();
+  }
+}
+
+// ============================================================
+//  INIT CHARTS  (sizeCanvas reads flex-computed dimensions here)
+// ============================================================
+const speedChart = new LineChart(
+  document.getElementById("chart-speed"), {
+    color: "#00c8ff",
+    yMin: 0, yMax: SPEED_MAX,
+    unit: " km/h",
+  }
+);
+
+const cteChart = new LineChart(
+  document.getElementById("chart-cte"), {
+    color: "#f0a030",
+    yMin: -CTE_RANGE, yMax: CTE_RANGE,
+    unit: " m",
+    zeroLine: true,
+    thresholds: [
+      { y:  CTE_THR, color: "#aa2222", label: "+" + CTE_THR + "m" },
+      { y: -CTE_THR, color: "#aa2222", label: "-" + CTE_THR + "m" },
+    ],
+  }
+);
+
+const fsmChart = new FsmHistory(document.getElementById("chart-fsm"));
+const minimap  = new MiniMap("minimap");
+
+window.addEventListener("resize", () => {
+  [speedChart, cteChart, fsmChart].forEach(c => {
+    c._sz = sizeCanvas(c.canvas);
+    c.ctx = c.canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    c.ctx.scale(dpr, dpr);
+  });
+  minimap.resize();
+});
+
+// ============================================================
+//  UI UPDATE
+// ============================================================
+let msgCount    = 0;
+let lastFsmState = null;
+let lastMsgTime  = 0;
+
+setInterval(() => {
+  if (lastMsgTime === 0) return;
+  const age = (Date.now() - lastMsgTime) / 1000;
+  if (age > 0.5) {
+    document.getElementById("fps-val").textContent =
+      (age > 2 ? "NO DATA" : "FPS —") + " (" + age.toFixed(1) + "s ago)";
+  }
+}, 250);
+
+function update(s) {
+  msgCount++;
+  lastMsgTime = Date.now();
+  document.getElementById("msg-count").textContent = msgCount + " msgs";
+  document.getElementById("tick-val").textContent  = s.tick;
+  document.getElementById("fps-val").textContent   = s.fps > 0 ? "FPS " + s.fps : "FPS —";
+
+  const v  = s.vehicle    || {};
+  const d  = s.decision   || {};
+  const p  = s.perception || {};
+  const pl = s.planning   || {};
+  const c  = s.control    || {};
+  const sf = s.safety     || {};
+  const tl = s.tl         || {};
+  const ss = s.stop       || {};
+
+  set("v_v_kmh", (v.v_kmh||0).toFixed(2) + " km/h");
+  set("v_thr",   (v.throttle||0).toFixed(3));
+  set("v_brk",   (v.brake||0).toFixed(3),   v.brake > 0.01 ? "red" : "");
+  set("v_str",   (v.steer||0).toFixed(3));
+  set("v_yaw",   (v.yaw||0).toFixed(1) + "° " + (v.x||0).toFixed(1) + "/" + (v.y||0).toFixed(1));
+
+  set("d_fsm",    d.fsm_state || "—", fsmCssClass(d.fsm_state));
+  set("d_tspd",   (d.target_speed||0).toFixed(1) + " km/h");
+  set("d_reason", d.reason || "—");
+
+  set("p_n",    p.n_obstacles||0,  p.n_obstacles > 0 ? "yellow" : "green");
+  set("p_dist", fmtDist(p.closest_dist||999),
+                (p.closest_dist||999) < 20 ? "red" : (p.closest_dist||999) < 50 ? "yellow" : "");
+  set("p_cv",   (p.closest_class||"—") + " " + (p.closest_v||0).toFixed(1) + "km/h");
+
+  set("pl_n",      pl.n_waypoints||0);
+  set("pl_h",      (pl.horizon_m||0).toFixed(1) + " m");
+  set("pl_cte",    (pl.cte||0).toFixed(3) + " m",
+                   Math.abs(pl.cte||0) > CTE_THR ? "red" : Math.abs(pl.cte||0) > 0.15 ? "yellow" : "green");
+  set("pl_branch", pl.branch ? "YES" : "no", pl.branch ? "yellow" : "grey");
+
+  set("c_steer",  (c.steer||0).toFixed(3));
+  set("c_thr",    (c.throttle||0).toFixed(3));
+  set("c_brk",    (c.brake||0).toFixed(3), c.brake > 0.01 ? "red" : "");
+  set("c_tspd",   (c.target_speed||0).toFixed(1) + " km/h");
+
+  const ttcDisp = (sf.ttc||999) >= 998 ? "inf s" : (sf.ttc||0).toFixed(2) + " s";
+  set("s_ttc",      ttcDisp, (sf.ttc||999) < 2 ? "red" : (sf.ttc||999) < 4 ? "yellow" : "green");
+  set("s_override", sf.override ? "ACTIVE" : "no",   sf.override ? "red" : "grey");
+  set("s_inter",    sf.interventions||0,               sf.interventions > 0 ? "yellow" : "grey");
+  set("s_fault",    sf.sensor_fault ? "FAULT" : "ok", sf.sensor_fault ? "red" : "grey");
+  const banner = document.getElementById("safety-banner");
+  if (banner) banner.className = sf.override ? "active" : "";
+
+  const tlC = tl.state==="Red" ? "red" : tl.state==="Yellow" ? "yellow" : tl.state==="Green" ? "green" : "grey";
+  set("tl_state", tl.state||"—", tlC);
+  set("tl_dist",  fmtDist(tl.dist_m||999));
+  set("ss_det",   ss.detected ? "YES" : "no", ss.detected ? "yellow" : "grey");
+  set("ss_dist",  fmtDist(ss.dist_m||999));
+
+  speedChart.push(v.v_kmh || 0);
+  cteChart.push(pl.cte    || 0);
+  fsmChart.push(d.fsm_state || "");
+
+  speedChart.draw();
+  cteChart.draw();
+  fsmChart.draw();
+
+  minimap.draw(
+    v.x   != null ? v.x   : null,
+    v.y   != null ? v.y   : null,
+    v.yaw != null ? v.yaw : null,
+    pl.wps_xy || []
+  );
+
+  if (d.fsm_state && d.fsm_state !== lastFsmState) {
+    const isAlert = ["RED_LIGHT","STOP","EMERGENCY"].includes(d.fsm_state);
+    logEntry("FSM → " + d.fsm_state + (d.reason ? " : " + d.reason : ""), isAlert ? "a" : "w");
+    lastFsmState = d.fsm_state;
+  }
+  if (sf.override && !window._lastOverride) logEntry("SAFETY OVERRIDE actif", "a");
+  window._lastOverride = sf.override;
+}
+
+// ============================================================
+//  LOG HELPER
+// ============================================================
+function logEntry(msg, cls) {
+  const el  = document.getElementById("log");
+  const div = document.createElement("div");
+  div.className = "e" + (cls ? " " + cls : "");
+  const t = new Date().toLocaleTimeString("fr-FR", { hour12: false });
+  div.textContent = "[" + t + "] " + msg;
+  el.appendChild(div);
+  while (el.children.length > 80) el.removeChild(el.firstChild);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ============================================================
+//  WEBSOCKET
+// ============================================================
+function connect() {
+  const statusEl = document.getElementById("ws-status");
+  statusEl.textContent = "Connexion...";
+  statusEl.className   = "";
+
+  const ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    statusEl.textContent = "Connecte — " + WS_URL;
+    statusEl.className   = "ok";
+    logEntry("Connecte au dashboard WS");
+  };
+
+  ws.onmessage = (event) => {
+    let msg;
+    try {
+      msg = JSON.parse(event.data);
+    } catch(e) {
+      const raw = event.data.substring(0, 500);
+      console.error("[DASH] JSON.parse erreur:", e.message, "\nraw:", raw);
+      try {
+        const fixed = event.data.replace(/\bInfinity\b/g, "null")
+                                 .replace(/-Infinity\b/g, "null")
+                                 .replace(/\bNaN\b/g, "null");
+        msg = JSON.parse(fixed);
+        console.warn("[DASH] Fallback Infinity→null applique");
+      } catch(e2) {
+        console.error("[DASH] Fallback echoue aussi:", e2.message);
+        return;
+      }
+    }
+
+    if (msg.type === "route") {
+      const pts = msg.points || [];
+      minimap.setRoute(pts);
+      logEntry("Route reçue : " + pts.length + " waypoints", "");
+      return;
+    }
+
+    update(msg);
+  };
+
+  ws.onerror = () => {
+    statusEl.textContent = "Erreur WS";
+    statusEl.className   = "err";
+  };
+
+  ws.onclose = (event) => {
+    const clean  = event.wasClean ? "propre" : "BRUTAL";
+    const reason = event.reason   || "(aucune raison)";
+    const detail = "code=" + event.code + " " + clean + " reason=" + reason;
+    statusEl.textContent = "Deconnecte [" + detail + "] — reconnexion 2s...";
+    statusEl.className   = "err";
+    logEntry("DECONNEXION " + detail, "a");
+    console.warn("[WS] onclose", { code: event.code, wasClean: event.wasClean, reason });
+    setTimeout(connect, 2000);
+  };
+}
+
+connect();
+</script>
+</body>
+</html>

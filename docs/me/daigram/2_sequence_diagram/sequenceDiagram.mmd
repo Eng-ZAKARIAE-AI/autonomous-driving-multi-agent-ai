@@ -1,0 +1,33 @@
+sequenceDiagram
+    autonumber
+    
+    box Frontend Layer
+        actor User as Web Dashboard
+    end
+    box Backend Layer (AI & API)
+        participant API as FastAPI Server
+        participant Loop as Trainer Loop
+        participant Agent as RL Agent (SAC/PPO)
+    end
+    box Simulation Layer
+        participant Env as CarlaGymEnv
+        participant Sim as CARLA Simulator
+    end
+
+    %% 1. Initialization / Connection
+    User->>API: Connect via WebSocket (Stream Telemetry)
+    
+    %% 2. Explicit Iterative Training Loop Block
+    loop Every Simulation Step
+        Loop->>Env: step(action)
+        Env->>Sim: Apply control commands (Throttling/Steering)
+        Sim-->>Env: Return raw physics & sensor data (Frames/Lidar)
+        
+        Env->>Env: State Builder (Encode & Fuse Raw Obs)
+        Env->>Agent: Pass Fused State & Reward
+        Agent->>Agent: Compute Next Action
+        Agent-->>Loop: Return Optimal Action
+        
+        Loop->>API: Update Shared State Cache
+        API-->>User: Broadcast live metrics (FPS, Reward, Loss)
+    end

@@ -1,0 +1,218 @@
+carla:
+  host: localhost
+  port: 2000
+  map: Town10HD_Opt
+  synchronous: true
+  fixed_delta_seconds: 0.05
+  timeout: 60.0
+  ego_filter: vehicle.tesla.model3
+  traffic_vehicles: 0
+  pedestrians: 0
+  auto_launch: false
+  carla_root: null
+  launch_command: null
+  connect_retries: 10
+  retry_delay: 1.0
+
+simulation:
+  max_episode_steps: 400
+  target_speed: 16.0
+  smoothness_weight: 0.05
+  lane_weight: 1.0
+  collision_penalty: -100.0
+  speed_reward: 1.0
+  progress_reward: 0.3
+  goal_threshold: 5.0
+  speed_normalizer: 30.0
+  lane_normalizer: 4.0
+  distance_normalizer: 100.0
+
+reward:
+  speed_weight: 1.0
+  lane_weight: 1.0
+  progress_weight: 0.3
+  comfort_weight: 0.1
+  collision_penalty: -100.0
+  success_reward: 20.0
+
+# Perception camera — CARLA blueprint + YOLO input resolution.
+# 640x640 is YOLOv8n's native inference size: provides 54px/person at 10m,
+# 27px at 20m. Do NOT lower without re-running yolo_distance_benchmark.py.
+perception_camera:
+  width:  640
+  height: 640
+  fov:    90
+
+# RL encoder resolution — resize target in StateBuilder for future RL modules.
+# 84x84 is the Atari-legacy size used by PPO/SAC CNN encoders (ImageEncoder).
+rl_encoder:
+  width:    84
+  height:   84
+  channels: 3
+
+# DEPRECATED — kept for backward compat with baseline/TransFuser code only.
+# New code must use perception_camera or rl_encoder, never this section.
+camera:
+  width: 84
+  height: 84
+  fov: 90
+  channels: 3
+  input_width: 84
+  input_height: 84
+
+state:
+  vector_dim: 5
+
+agents:
+  decision:
+    # FSM states: FOLLOW_LANE | SLOW_DOWN | STOP | YIELD | EMERGENCY
+    state_dim: 6    # kept for backward compat with RL Decision agent (unused in FSM)
+    action_dim: 3
+    hidden_dim: 128
+  planning:
+    target_speed: 16.0        # km/h — normal driving
+    slow_speed: 6.0           # km/h — near obstacle / cautious (fork or obstacle)
+    obstacle_distance: 15.0   # m — distance below which we slow down on obstacle
+    obs_stop_m: 10.0          # m — arrêt complet quand obstacle encore plus proche (< obstacle_distance)
+                              #     empêche l'ego d'entrer dans la zone Safety MIN_SAFE_M=7.5m
+    branch_near_m: 15.0       # m — seuil SLOW_DOWN sur vrai fork (len(nexts)>1)
+                              # is_junction seul NE declenche PAS (cf. fix etape 5)
+    obs_slow_hysteresis_m: 5.0 # m — hystérèse : SLOW_DOWN maintenu jusqu'à d > obstacle_distance + hyst
+    # Car-following (IDM simplifié) — actif quand FSM=SLOW_DOWN + obstacle détecté
+    cf_headway_s: 2.0          # s    — règle des 2 secondes (distance de sécurité dynamique)
+    cf_k_dist: 0.5             # km/h/m — gain erreur distance
+    cf_k_vel: 0.5              # sans dim — amortissement vitesse relative (anti-accordéon)
+    tl_detect_m: 50.0         # m — horizon de détection TL (arm FSM) ; large pour survivre aux junctions masquantes
+    tl_brake_margin_m: 3.0   # m — marge de sécurité sur dist_freinage : freine à dist_feu <= v²/2a + tl_brake_margin_m
+    stop_detect_m: 50.0       # m — horizon de détection panneau STOP (même logique que tl_detect_m)
+    stop_brake_margin_m: 3.0  # m — marge de sécurité STOP : freine à stop_dist <= v²/2a + stop_brake_margin_m
+    acceleration_step: 3.0    # km/h per tick (speed ramp)
+    lookahead_waypoints: 20   # number of waypoints (horizon = n * spacing = 40m)
+    waypoint_spacing: 2.0     # metres -- 2m vs 4m (demo factice) : resolution 2x plus fine
+                              # -> variation angulaire /segment reduite -> steer plus doux
+  control:
+    # --- Lateral PID (heading_error_norm ∈ [-1,1] = deg/180) ---
+    # kp=1.2 : 90° d'erreur (norm=0.5) → steer=0.6 (vif sans saturation immédiate)
+    # kd=0.1 : amortit lacet, modéré pour ne pas amplifier bruit CARLA (±0.5°)
+    steer_kp: 1.2
+    steer_ki: 0.0    # Intentionnellement 0 : ki accumulerait le heading_error de
+                     # pilotage de courbe (= signal, pas perturbation) → survirage.
+    steer_kd: 0.1
+    max_steer: 0.8
+    # --- Feedforward de courbure (fix CTE courbe étape 3 rouverte) ---
+    # Formule : steer_ff = steer_kff × κ_local × wheelbase_m
+    #
+    # Modèle bicyclette (Ackermann) :
+    #   steer_centripète = tan(δ_roue) / tan(δ_max)  ≈  κ × L / δ_max
+    #   → steer_kff ≈ 1/δ_max_roue_rad  (gain pur, calibrable)
+    #   → wheelbase_m = L  (empattement véhicule, paramètre physique, NON calibré)
+    #
+    # Séparation PHYSIQUE / RÉGLABLE :
+    #   wheelbase_m : constant Tesla Model3 CARLA (~2.87m). Changer si autre véhicule.
+    #   steer_kff   : gain pur ≈ 1/δ_max. Théorie : δ_max≈1.22 rad → k_ff≈0.82.
+    #                 Point de départ calculé, à valider sur run réel (sp≈0 en arc).
+    #                 0.0 = feedforward désactivé.
+    steer_kff: 0.62             # gain pur ≈ 1/δ_max_roue : amplitude établie calée (sp~+0.03)
+    wheelbase_m: 2.87           # empattement Tesla Model3 CARLA (m) — NE PAS calibrer
+    curvature_smooth_n: 2       # segments proches de l'ego (2=4m) : evite ff premature en approche de courbe
+    curvature_max_radpm: 0.10   # clamp anti-aberrant : 0.10 rad/m = rayon 10m
+    # --- Rate-limiter sur steer_ff (fix transitoire d'entrée d'arc) ---
+    # Borne la variation de steer_ff par tick (m/s dans la formule → adimensionnel/tick).
+    # N'agit QUE pendant la montée (curv 0→κ) ; transparent en régime établi (curv constant).
+    # Cible : ff cible=+0.052 en ~30 ticks → rate_max ≈ 0.052/30 ≈ 0.0017 → essai 0.002.
+    # Si pic d'entrée toujours là → baisser. Si pic extérieur apparaît (ff trop retardé) → monter.
+    # 0.0 = désactivé (comportement échelon, k_ff=0.62 sans lissage).
+    steer_ff_rate_max: 0.002    # variation max de steer_ff/tick (amortit brusquerie entrée)
+    # --- Terme latéral Stanley (correction proportionnelle au CTE) ---
+    # steer_cte = arctan(k_cte * CTE / max(v, v_min))
+    # CTE<0 = intérieur virage droit → terme<0 → steer gauche → ramène au centre.
+    # Corrige le pic d'entrée d'arc que le PID de cap ne peut pas attraper directement.
+    # 0.0 = désactivé (non-régression totale, comportement pré-Stanley).
+    steer_k_cte: 1.5           # gain Stanley (palier 3 : CAS B → 1.5, CTE établi à résorber)
+    cte_v_min: 1.0             # vitesse min pour division (protège v→0 au spawn)
+    # --- Lookahead feedforward (anticipe la courbure à venir) ---
+    # Saute skip=round(ff_lookahead_m/spacing) waypoints avant la fenêtre de courbure.
+    # ATTENTION arrondi Python : round(1.5)=2 (bancaire) → 3.0m → skip=2 (4m réel).
+    # 2.0m → round(1.0)=1 → skip=1 (2m réel). Commencer par 2.0m.
+    ff_lookahead_m: 2.0         # skip=round(2.0/2.0)=1 → compromis entrée/sortie (skip=2 aggrave entrée)
+    # --- Longitudinal PID (opere sur error_norm = speed_error_ms / speed_ref_ms) ---
+    # Normalisation anti bang-bang : a v=0 cible=20 km/h -> throttle=0.53 (pas 1.0)
+    # kp=0.8 : throttle initial ~0.53 au demarrage (bien en dessous de 0.95)
+    #
+    # ki=0.12 — calibre sur le DRAG du plant CARLA (pas sur la duree de l'episode).
+    # Mesure experimentale run-1 : equilibre a 10.5 km/h avec throttle=0.177
+    # => drag_coeff = 0.177/2.92 = 0.061 /s => throttle_eq(20km/h) = 0.061*5.56 = 0.337
+    # => integral_eq = throttle_eq / ki = 0.337 / 0.12 = 2.81
+    # => anti-windup cap = 2.0/0.12 = 16.7 >> 2.81 : pas de saturation au regime
+    # Run diagnostique ki=0.06 confirme : integral=3.22 a tick 390, cap=33.3 jamais approche.
+    # ki=0.06 trop lent (convergence ~50s), ki=0.12 cible convergence en ~20s.
+    #
+    # kd=0 : pas de derivee (bruit vitesse CARLA)
+    # speed_ref=30 km/h : normalisation adaptee a la plage 0-30 km/h (conduite urbaine)
+    speed_kp: 0.8
+    speed_ki: 0.12
+    speed_kd: 0.0
+    speed_ref_kmh: 30.0       # reference de normalisation (m/s = 30/3.6 = 8.33)
+    max_throttle: 1.0
+    max_brake: 0.7
+    lookahead_distance: 5.0   # metres — sélection waypoint cible
+    # --- Perception frequency ---
+    # GPU benchmark (T1200, torch 2.4.1+cu124): YOLOv8n at 640x640 = 8.7 ms/frame.
+    # Tick budget = 50 ms. YOLO uses 8.7 ms → 41 ms left for other agents.
+    # Full-frequency perception (every tick, 20 Hz) is within budget.
+    # The "every 2 ticks" mitigation documented earlier is NOT needed on GPU
+    # and has been removed from the design.
+    # Set to 2+ only if running on CPU (~60 ms/frame, which exceeds the tick budget).
+    perception_stride: 1      # 1 = every tick (GPU). Set to 2 for CPU fallback.
+
+training:
+  episodes: 200
+  save_every: 20
+  checkpoint_dir: checkpoints
+  learning_rate: 0.0003
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  ppo_epochs: 4
+  batch_size: 64
+  action_std: 0.5
+  sac_alpha: 0.2
+  target_smoothing_tau: 0.005
+  replay_size: 100000
+  model_path: models/ppo_agent.pth
+  seed: 42
+evaluation:
+  episodes: 5
+
+safety:
+  # Seuils TTC calibres sur mesure reelle CARLA : d_stop=2.99m a v0=4.85 m/s (brake=0.7).
+  # forward_dist = centre-a-centre. Tesla Model3 L=4.69m => rayon=2.35m.
+  # TTC_EMERGENCY = 2.0s => pare-chocs a pare-chocs = 2*4.85 - 4.69 = 5.01m > d_stop=3m (marge OK).
+  # TTC_CLEAR = 3.0s (hysteresis de liberation du latch).
+  # latch_ticks = 20 (1.0s a 20 Hz -- evite relibration si obstacle oscille).
+  ttc_emergency: 2.0
+  ttc_clear: 3.0
+  latch_ticks: 20
+  brake_force: 0.7
+
+baseline:
+  enabled: false
+  model_type: transfuser          # transfuser | interfuser
+  model_path: backend/weights/transfuser/model_seed1_39.pth
+  embed_dim: 256
+  n_heads: 4
+  n_layers: 2
+  bev_channels: 2
+  bev_size: 128
+
+perception:
+  use_yolo: false          # set to true to enable YOLOv8 detection
+  model_name: yolov8n.pt  # ultralytics model name or path to local .pt file
+  confidence_threshold: 0.40
+  # device: auto-detected at runtime — "cuda" if torch CUDA available, else "cpu".
+  # Requires torch with CUDA support (pip install torch --index-url .../cu128).
+  # Current venv has torch 2.4.1+cpu (CPU-only) -> YOLO runs on CPU (~60ms/frame).
+  # With CUDA PyTorch on T1200: expected ~8-15ms/frame (within 50ms tick budget).
+  device: cuda             # torch 2.4.1+cu124 installed, T1200 GPU confirmed
+  input_width: 640
+  input_height: 640
